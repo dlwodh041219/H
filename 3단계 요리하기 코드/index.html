@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>카메라 인터랙션 프로젝트</title>
+
+  <!— p5.js + p5.sound —>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/addons/p5.sound.min.js"></script>
+
+  <!— ml5.js v1.x —>
+  <script src="https://unpkg.com/ml5@1.2.1/dist/ml5.min.js"></script>
+
+  <!— Handsfree —>
+  <link rel="stylesheet"
+        href="https://unpkg.com/handsfree@8.4.2/build/lib/assets/handsfree.css" />
+  <script src="https://unpkg.com/handsfree@8.4.2/build/lib/handsfree.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="style.css" />
+
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      color: white;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+    }
+
+    .handsfree-debugger,
+    .handsfree-debugger-root,
+    .handsfree-debugger-plugin,
+    .handsfree-dev-meta {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!— 프로젝트별로 교체 —>
+  <script src="sketch.js"></script>
+</body>
+</html>
+
+<script src="https://cdn.jsdelivr.net/npm/clmtrackr@1.1.2/build/clmtrackr.min.js"></script>
