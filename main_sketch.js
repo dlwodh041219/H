@@ -2,12 +2,13 @@ let fontSurround;
 let fontHand;
 let img;
 
+let phase = 1;           // 1: 첫 화면, 2: 템플릿 선택, 3: 게임, 4: QR
+let selectedGame = null; // "animal" | "cooking" | "house"
+
 let animal;
 let cook;
 let house;
 let human;
-
-let startpage = true;
 
 function preload() {
   fontSurround = loadFont("surround.ttf");
@@ -23,14 +24,19 @@ function preload() {
 function setup() {
   createCanvas(640, 480);
   noCursor();
+  console.log("✅ main setup 실행됨");
 }
 
 function draw() {
-  if (startpage) {
+  if (phase === 1) {
     drawStartPage();
-  } else {
+  } else if (phase === 2) {
     drawTemplatePage();
-  }
+  } else if (phase === 3) {
+    if (selectedGame === "animal")      drawAnimalGame();
+    else if (selectedGame === "cooking") drawCookingGame();
+    else if (selectedGame === "house")   drawHouseGame();
+  } // else if (phase === 4) { drawQRPage(); // 나중에 구현}
 
   // 공통 커서 (손가락)
   push();
@@ -295,12 +301,44 @@ function drawTemplateCard(
 /* ================== 클릭 처리 ================== */
 
 function mousePressed() {
-  if (startpage) {
-    // START 버튼 클릭
+  // 1단계: START 화면 → 템플릿 화면으로 이동
+  if (phase === 1) {
     if (mouseX < 495 && mouseX > 145 && mouseY < 410 && mouseY > 290) {
-      startpage = false;
+      phase = 2;   // 템플릿 선택 페이지로 이동
     }
-  } else {
-    // 나중에 각 카드 클릭해서 다음 단계로 넘어가는 로직 넣을 부분
   }
+
+  // 2단계: 템플릿 선택 페이지 — 여기 코드가 들어감
+  else if (phase === 2) {
+
+    const cardW = 180;
+    const cardH = 320;
+    const yCenter = 260;
+    const x1 = 120;
+    const x2 = width / 2;
+    const x3 = width - 120;
+
+    // 카드 1: 동물 키우기
+    if (isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH)) {
+      selectedGame = "animal";
+      setupAnimalGame();   // 호출됨
+      phase = 3;
+    }
+
+    // 카드 2: 요리하기
+    else if (isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH)) {
+      selectedGame = "cooking";
+      setupCookingGame();  // 호출됨
+      phase = 3;
+    }
+
+    // 카드 3: 집 짓기
+    else if (isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH)) {
+      selectedGame = "house";
+      setupHouseGame();    // 호출됨
+      phase = 3;
+    }
+  }
+
+  // (선택사항) phase===3일 때 개별 게임에서 mousePressed 필요하면 여기서 route 가능
 }

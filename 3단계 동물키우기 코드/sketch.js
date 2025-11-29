@@ -1,7 +1,8 @@
 let video;
-let bodyPose;
-let poses = [];
-let currentPose = null;
+let bodyPose;           
+let poses = [];         
+let currentPose = null; 
+let handsfree;
 
 let currentStep = 1;
 let stepDone = false;
@@ -9,36 +10,29 @@ let stepDone = false;
 // 기준선
 let headY, chestY;
 
-// 매끄럽게
+// 스무딩
 let smoothPoints = {};
 let SMOOTHING = 0.6;
 let BASE_MIN_CONF = 0.15;
 
-// 1단계: 도끼질
-let axeState = "WAIT_UP";
-let axeTimer = 0;
-let axeCount = 0;
-let AXE_MAX_FRAMES = 40;
-let axeUpStreak = 0;
-let axeDownStreak = 0;
+// 1단계: 안아주기(양팔 벌리기)
+let holdStartTime = null;
+let HOLD_DURATION = 3000; // 3초
 
-// 2단계: 톱질
-let sawState = "LEFT";
-let sawCycles = 0;
-let sawLeftStreak = 0;
-let sawRightStreak = 0;
+// 2단계: 밥주기(Handsfree)
+let food = { x: 500, y: 100, r: 50, visible: true };
+let bowl = { x: 320, y: 400, r: 60, visible: true };
 
-// 3단계: 망치질
-let hammerState = "UP";
-let hammerCycles = 0;
-let hammerUpStreak = 0;
-let hammerDownStreak = 0;
+// 3단계: 쓰다듬기
+let waveState = "DOWN";
+let waveCount = 0;
+let REQUIRED_WAVES = 3;
 
-// 4단계: 인사
-let waveState = "LEFT";
-let waveCycles = 0;
-let waveLeftStreak = 0;
-let waveRightStreak = 0;
+// 4단계: 동물과 놀아주기
+let swingState = "WAIT_UP";
+let swingCount = 0;
+let swingTimer = 0;
+let SWING_MAX_FRAMES = 30;
 
 
 function preload() {
@@ -54,6 +48,9 @@ function setup() {
 
   bodyPose.detectStart(video, gotPoses);
 
+  handsfree = new Handsfree({ hands: true, maxNumHands: 2 });
+  handsfree.start();
+
   console.log("ml5 version:", ml5.version);
 }
 
@@ -65,7 +62,7 @@ function gotPoses(results) {
   if (currentPose) updateBodyHeights();
 }
 
-// getPart 
+// 특정 관절 가져오기 + 스무딩
 function getPart(name, minConf = BASE_MIN_CONF) {
   if (!currentPose || !currentPose.keypoints) {
     return smoothPoints[name] || null;
@@ -83,11 +80,9 @@ function getPart(name, minConf = BASE_MIN_CONF) {
   let sx, sy;
 
   if (!prev) {
-    // 이전 데이터가 없으면 raw 그대로
     sx = raw.x;
     sy = raw.y;
   } else {
-    // 스무딩 적용
     sx = lerp(prev.x, raw.x, SMOOTHING);
     sy = lerp(prev.y, raw.y, SMOOTHING);
   }
@@ -95,7 +90,6 @@ function getPart(name, minConf = BASE_MIN_CONF) {
   let smoothed = { x: sx, y: sy, confidence: c };
   smoothPoints[name] = smoothed;
 
-  // confidence 낮아도 이전값 있었으면 유지
   if (c < minConf && !prev) {
     return null;
   }
@@ -103,7 +97,6 @@ function getPart(name, minConf = BASE_MIN_CONF) {
   return smoothed;
 }
 
-// 기준선 업데이트
 function updateBodyHeights() {
   let nose = getPart("nose");
   let ls = getPart("left_shoulder");
@@ -115,239 +108,249 @@ function updateBodyHeights() {
 
 // =====================================
 function draw() {
-  background(0);
+  background(255);
+
   image(video, 0, 0, width, height);
 
-  if (currentPose) drawKeypoints();
+  if (currentStep === 1) {
+    drawKeypoints();              // 포즈 디버그 점
+    stepDone = detectOpenArms();  // 안아주기
+    } else if (currentStep === 2) {
+      drawObjects();                // 당근/그릇
+      let { left, right } = getHandCenters();
+  
+      if (left) checkCollision(left);
+      if (right) checkCollision(right);
 
-  if (!stepDone && currentPose) {
-    if (currentStep === 1) updateAxe();
-    else if (currentStep === 2) updateSaw();
-    else if (currentStep === 3) updateHammer();
-    else if (currentStep === 4) updateWave();
+    if (!food.visible && !bowl.visible) stepDone = true;
+  } else if (currentStep === 3) {
+    drawKeypoints();
+    detectWave();                 // 머리 위 손 왕복
+  } else if (currentStep === 4) {
+    drawKeypoints();
+    playWithAnimal();             // 양손 위아래 도끼질 느낌
   }
 
   drawUI();
-}
 
-// 1단계: 도끼질
-function updateAxe() {
-  let lw = getPart("left_wrist");
-  let rw = getPart("right_wrist");
-  if (!lw || !rw || chestY == null) return;
+  if (stepDone) {
+    currentStep++;
+    stepDone = false;
 
-  let upOK = lw.y < chestY - 30 && rw.y < chestY - 30;
-  let downOK = lw.y > chestY + 30 && rw.y > chestY + 30;
-
-  if (upOK) axeUpStreak++;
-  else axeUpStreak = 0;
-
-  if (downOK) axeDownStreak++;
-  else axeDownStreak = 0;
-
-  if (axeState === "WAIT_UP") {
-    if (axeUpStreak >= 3) {
-      axeState = "READY_DOWN";
-      axeTimer = 0;
-      axeDownStreak = 0;
+    if (currentStep === 2) {
+      food.visible = true;
+      bowl.visible = true;
     }
-  } else if (axeState === "READY_DOWN") {
-    axeTimer++;
-
-    if (axeDownStreak >= 3 && axeTimer < AXE_MAX_FRAMES) {
-      axeCount++;
-      console.log("도끼질:", axeCount);
-      axeState = "WAIT_UP";
-      axeTimer = 0;
-      axeUpStreak = 0;
-      axeDownStreak = 0;
+    if (currentStep === 3) {
+      waveState = "DOWN";
+      waveCount = 0;
     }
-
-    if (axeTimer > AXE_MAX_FRAMES * 2) {
-      axeState = "WAIT_UP";
-      axeTimer = 0;
-      axeUpStreak = 0;
-      axeDownStreak = 0;
+    if (currentStep === 4) {
+      swingState = "WAIT_UP";
+      swingCount = 0;
+      swingTimer = 0;
     }
-  }
-
-  if (axeCount >= 1) {
-    currentStep = 2;
-    console.log("1단계 완료 → 2단계");
   }
 }
 
-// 2단계: 톱질
-function updateSaw() {
+// 1단계: 안아주기(양팔 크게 벌리고 3초 유지)
+function detectOpenArms() {
+  if (!currentPose) return false;
+
+  let ls = getPart("left_shoulder");
+  let rs = getPart("right_shoulder");
   let lw = getPart("left_wrist");
   let rw = getPart("right_wrist");
-  if (!lw || !rw) return;
+  let le = getPart("left_elbow");
+  let re = getPart("right_elbow");
 
-  let handsClose = abs(lw.x - rw.x) < 140;
-  if (!handsClose) {
-    sawLeftStreak = 0;
-    sawRightStreak = 0;
+  if (!ls || !rs || !lw || !rw || !le || !re) {
+    holdStartTime = null;
+    return false;
+  }
+
+  let shoulderWidth = dist(ls.x, ls.y, rs.x, rs.y);
+  let wristDist = dist(lw.x, lw.y, rw.x, rw.y);
+  let elbowDist = dist(le.x, le.y, re.x, re.y);
+
+  let chestTopY = min(ls.y, rs.y);
+  let chestBottomY = chestTopY + shoulderWidth * 1.3;
+
+  let wristsAtChestHeight =
+    lw.y > chestTopY &&
+    lw.y < chestBottomY &&
+    rw.y > chestTopY &&
+    rw.y < chestBottomY;
+
+  let armsWideEnough = wristDist > shoulderWidth * 2.3;
+  let elbowsWide = elbowDist > shoulderWidth * 1.6;
+
+  let postureOK = armsWideEnough && elbowsWide && wristsAtChestHeight;
+
+  if (postureOK) {
+    if (holdStartTime === null) holdStartTime = millis();
+    let elapsed = millis() - holdStartTime;
+    fill(0, 0, 0, 150);
+    rect(0, height - 80, width, 80);
+    fill(255);
+    textSize(18);
+    text(
+      "유지 시간: " + (elapsed / 1000).toFixed(1) + "초 / 3초",
+      width / 2,
+      height - 40
+    );
+    if (elapsed >= HOLD_DURATION) return true;
+  } else {
+    holdStartTime = null;
+  }
+
+  return false;
+}
+
+// 2단계: 밥주기 (Handsfree)
+function drawObjects() {
+  textSize(100);
+  if (food.visible) text("🥕", food.x, food.y);
+  if (bowl.visible) text("🥣", bowl.x, bowl.y);
+}
+
+function checkCollision(hand) {
+  // 당근부터 터치
+  if (food.visible) {
+    if (dist(hand.x, hand.y, food.x, food.y) < food.r) {
+      food.visible = false;
+      console.log("당근 터치!");
+    }
     return;
   }
 
-  let avgX = (lw.x + rw.x) / 2;
-  let center = width / 2;
-  let leftZone = center - 60;
-  let rightZone = center + 60;
-
-  let inLeft = avgX < leftZone;
-  let inRight = avgX > rightZone;
-
-  if (inLeft) sawLeftStreak++;
-  else sawLeftStreak = 0;
-
-  if (inRight) sawRightStreak++;
-  else sawRightStreak = 0;
-
-  if (sawState === "LEFT") {
-    if (sawRightStreak >= 3) {
-      sawState = "RIGHT";
-      sawLeftStreak = 0;
+  // 당근이 사라진 뒤에야 그릇 터치
+  if (!food.visible && bowl.visible) {
+    if (dist(hand.x, hand.y, bowl.x, bowl.y) < bowl.r) {
+      bowl.visible = false;
+      console.log("그릇 터치!");
     }
-  } else if (sawState === "RIGHT") {
-    if (sawLeftStreak >= 3) {
-      sawState = "LEFT";
-      sawRightStreak = 0;
-      sawCycles++;
-      console.log("톱질 cycles:", sawCycles);
-    }
-  }
-
-  if (sawCycles >= 3) {
-    currentStep = 3;
-    console.log("2단계 완료 → 3단계");
   }
 }
 
-// 3단계: 망치질 (오른손 위↔아래)
-function updateHammer() {
-  let rw = getPart("right_wrist");
-  if (!rw || chestY == null) return;
+function getHandCenters() {
+  if (
+    !handsfree.data.hands ||
+    !handsfree.data.hands.multiHandLandmarks
+  )
+    return { right: null, left: null };
 
-  let upper = chestY - 25;
-  let lower = chestY + 25;
+  let landmarks = handsfree.data.hands.multiHandLandmarks;
+  let handedness = handsfree.data.hands.multiHandedness;
+  let right = null,
+    left = null;
 
-  let isUp = rw.y < upper;
-  let isDown = rw.y > lower;
+  for (let h = 0; h < landmarks.length; h++) {
+    let lx = map(landmarks[h][0].x, 0, 1, 0, width);
+    let ly = map(landmarks[h][0].y, 0, 1, 0, height);
 
-  if (isUp) hammerUpStreak++;
-  else hammerUpStreak = 0;
+    // 손 좌표도 좌우 반전
+    lx = width - lx;
 
-  if (isDown) hammerDownStreak++;
-  else hammerDownStreak = 0;
-
-  if (hammerState === "UP") {
-    if (hammerDownStreak >= 3) {
-      hammerState = "DOWN";
-      hammerUpStreak = 0;
-    }
-  } else if (hammerState === "DOWN") {
-    if (hammerUpStreak >= 3) {
-      hammerState = "UP";
-      hammerDownStreak = 0;
-      hammerCycles++;
-      console.log("망치 cycles:", hammerCycles);
-    }
+    let label = handedness[h].label;
+    if (label === "Right") right = { x: lx, y: ly };
+    if (label === "Left") left = { x: lx, y: ly };
   }
-
-  if (hammerCycles >= 5) {
-    currentStep = 4;
-    console.log("3단계 완료 → 4단계");
-  }
+  return { right, left };
 }
 
-// 4단계: 인사 (오른손 좌↔우)
-function updateWave() {
+// 3단계: 쓰담쓰담 (머리 위로 손 왕복)
+function detectWave() {
+  if (!currentPose) return;
   let rw = getPart("right_wrist");
-  if (!rw) return;
+  let lw = getPart("left_wrist");
+  let nose = getPart("nose");
+  if (!rw || !lw || !nose) return;
 
-  let centerX = width / 2;
-  let leftBorder = centerX - 40;
-  let rightBorder = centerX + 40;
+  headY = nose.y;
+  let handAboveHead = rw.y < headY + 30 || lw.y < headY + 30;
 
-  let isLeft = rw.x < leftBorder;
-  let isRight = rw.x > rightBorder;
-
-  if (isLeft) waveLeftStreak++;
-  else waveLeftStreak = 0;
-
-  if (isRight) waveRightStreak++;
-  else waveRightStreak = 0;
-
-  if (waveState === "LEFT") {
-    if (waveRightStreak >= 3) {
-      waveState = "RIGHT";
-      waveLeftStreak = 0;
-    }
-  } else if (waveState === "RIGHT") {
-    if (waveLeftStreak >= 3) {
-      waveState = "LEFT";
-      waveRightStreak = 0;
-      waveCycles++;
-      console.log("인사 cycles:", waveCycles);
+  if (waveState === "DOWN") {
+    if (handAboveHead) waveState = "UP";
+  } else if (waveState === "UP") {
+    if (!handAboveHead) {
+      waveState = "DOWN";
+      waveCount++;
+      console.log("손 왕복 횟수:", waveCount);
     }
   }
 
-  if (waveCycles >= 3) {
-    stepDone = true;
-    fill(0, 180);
-    rect(0, height / 2 - 30, width, 60);
-    fill(0, 255, 0);
-    textSize(28);
-    text("🎉 집 짓기 완료! 손님들과 집들이를 해요! 🎉", width / 2, height / 2);
+  if (waveCount >= REQUIRED_WAVES) stepDone = true;
+}
+
+// 4단계: 동물과 놀기 (양손 위↔아래 도끼질 느낌)
+function playWithAnimal() {
+  if (!currentPose) return;
+
+  let lw = getPart("left_wrist");
+  let rw = getPart("right_wrist");
+  let ls = getPart("left_shoulder");
+  let rs = getPart("right_shoulder");
+
+  if (!lw || !rw || !ls || !rs) return;
+
+  let chestY = (ls.y + rs.y) / 2;
+  let upMargin = 20;
+  let downMargin = 20;
+
+  let handsUp = lw.y < chestY - upMargin && rw.y < chestY - upMargin;
+  let handsDown = lw.y > chestY + downMargin && rw.y > chestY + downMargin;
+
+  if (swingState === "WAIT_UP") {
+    if (handsUp) {
+      swingState = "READY_DOWN";
+      swingTimer = 0;
+    }
+  } else if (swingState === "READY_DOWN") {
+    swingTimer++;
+    if (handsDown && swingTimer < SWING_MAX_FRAMES) {
+      swingCount++;
+      console.log("동물과 놀아주기 완료:", swingCount);
+      swingState = "WAIT_UP";
+      swingTimer = 0;
+    }
+    if (swingTimer > SWING_MAX_FRAMES * 2) {
+      swingState = "WAIT_UP";
+      swingTimer = 0;
+    }
   }
+
+  if (swingCount >= 3) stepDone = true;
 }
 
 // 디버그용 키포인트 표시
 function drawKeypoints() {
-  noStroke();
-
-  let names = [
-    "nose",
-    "left_shoulder",
-    "right_shoulder",
-    "left_wrist",
-    "right_wrist",
-  ];
-
-  for (let name of names) {
-    let raw = currentPose.keypoints.find((k) => k.name === name);
-    let smoothed = smoothPoints[name];
-    if (!raw && !smoothed) continue;
-
-    let x = smoothed ? smoothed.x : raw.x;
-    let y = smoothed ? smoothed.y : raw.y;
-
-    // confidence 시각화 (녹-노-빨)
-    let c = raw ? raw.confidence : 0;
-    let r = map(c, 0, 1, 255, 0);
-    let g = map(c, 0, 1, 0, 255);
-
-    fill(r, g, 0);
-    ellipse(x, y, 10, 10);
+  if (!currentPose || !currentPose.keypoints) return;
+  for (let kp of currentPose.keypoints) {
+    if (kp.confidence > 0.3) {
+      fill(0, 0, 255); noStroke(); ellipse(kp.x, kp.y, 8, 8);
+    }
+  }
+  
+  if (headY) {
+    stroke(255, 0, 0); line(0, headY, width, headY); noStroke();
   }
 }
 
-// UI
 function drawUI() {
   fill(0, 180);
   rect(0, 0, width, 60);
-
+  
   fill(255);
   textSize(20);
   textAlign(CENTER, CENTER)
-
+  
   let desc = "";
-  if (currentStep === 1) desc = "1단계) 도끼질: 양손 깍지를 끼고, 머리 위에서 아래로 크게 내리세요!";
-  else if (currentStep === 2) desc = `2단계) 톱질: 옆으로 서서 양손 깍지를 끼고, 앞뒤로 크게 왕복하세요! (${sawCycles}/3)`;
-  else if (currentStep === 3) desc = `3단계) 망치질: 오른손을 위아래로 왕복하세요! (${hammerCycles}/5)`;
-  else if (currentStep === 4) desc = `4단계) 집들이 인사: 오른손을 좌우로 흔들어 보세요! (${waveCycles}/3)`;
-  if (stepDone) desc = "🎉 집 짓기 완료! 손님들과 즐거운 시간을 보내세요!🎉";
+  if (currentStep === 1) desc = "1단계) 안아주기: 양팔을 크게 벌리세요!";
+  else if (currentStep === 2) desc = "2단계) 밥 주기: 손으로 당근과 그릇을 차례대로 터치!";
+  else if (currentStep === 3) desc = `3단계) 쓰다듬기: 머리 위로 손 왕복! ${waveCount}/${REQUIRED_WAVES}`;
+  else if (currentStep === 4) desc = `4단계) 놀아주기: 양팔을 위아래로 왕복! ${swingCount}/3`;
+  if (currentStep > 4) desc = "🎉 동물 키우기 완료! 행복한 시간을 보내세요!🎉";
 
   text(desc, 320, 30);
 }

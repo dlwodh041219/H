@@ -1,0 +1,378 @@
+let houseVideo;
+let houseBodyPose;
+let housePoses = [];
+let houseCurrentPose = null;
+
+let houseStep = 1;
+let houseStepDone = false;
+
+// 기준선
+let houseHeadY, houseChestY;
+
+// 스무딩
+let houseSmoothPoints = {};
+const HOUSE_SMOOTHING = 0.6;
+const HOUSE_BASE_MIN_CONF = 0.15;
+
+// 1단계: 도끼질
+let houseAxeState = "WAIT_UP";
+let houseAxeTimer = 0;
+let houseAxeCount = 0;
+let HOUSE_AXE_MAX_FRAMES = 40;
+let houseAxeUpStreak = 0;
+let houseAxeDownStreak = 0;
+
+// 2단계: 톱질
+let houseSawState = "LEFT";
+let houseSawCycles = 0;
+let houseSawLeftStreak = 0;
+let houseSawRightStreak = 0;
+
+// 3단계: 망치질
+let houseHammerState = "UP";
+let houseHammerCycles = 0;
+let houseHammerUpStreak = 0;
+let houseHammerDownStreak = 0;
+
+// 4단계: 인사
+let houseWaveState = "LEFT";
+let houseWaveCycles = 0;
+let houseWaveLeftStreak = 0;
+let houseWaveRightStreak = 0;
+
+// 초기화 (메인에서 phase=3 진입할 때 호출)
+function setupHouseGame() {
+  // 카메라
+  houseVideo = createCapture(VIDEO, { flipped: true });
+  houseVideo.size(640, 480);
+  houseVideo.hide();
+
+  // 상태 초기화
+  houseStep = 1;
+  houseStepDone = false;
+
+  houseAxeState = "WAIT_UP";
+  houseAxeTimer = 0;
+  houseAxeCount = 0;
+  houseAxeUpStreak = 0;
+  houseAxeDownStreak = 0;
+
+  houseSawState = "LEFT";
+  houseSawCycles = 0;
+  houseSawLeftStreak = 0;
+  houseSawRightStreak = 0;
+
+  houseHammerState = "UP";
+  houseHammerCycles = 0;
+  houseHammerUpStreak = 0;
+  houseHammerDownStreak = 0;
+
+  houseWaveState = "LEFT";
+  houseWaveCycles = 0;
+  houseWaveLeftStreak = 0;
+  houseWaveRightStreak = 0;
+
+  houseSmoothPoints = {};
+  houseHeadY = null;
+  houseChestY = null;
+
+  // BodyPose 로드 & 시작
+  houseBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
+    console.log("House BodyPose ready");
+    houseBodyPose.detectStart(houseVideo, gotHousePoses);
+  });
+}
+
+// BodyPose 콜백
+function gotHousePoses(results) {
+  housePoses = results || [];
+  houseCurrentPose = housePoses[0] || null;
+
+  if (houseCurrentPose) updateHouseBodyHeights();
+}
+
+// 특정 관절 가져오기 + 스무딩
+function houseGetPart(name, minConf = HOUSE_BASE_MIN_CONF) {
+  if (!houseCurrentPose || !houseCurrentPose.keypoints) {
+    return houseSmoothPoints[name] || null;
+  }
+
+  let raw = houseCurrentPose.keypoints.find((k) => k.name === name);
+  let prev = houseSmoothPoints[name];
+
+  if (!raw) return prev || null;
+
+  let c = raw.confidence;
+  let sx, sy;
+
+  if (!prev) {
+    sx = raw.x;
+    sy = raw.y;
+  } else {
+    sx = lerp(prev.x, raw.x, HOUSE_SMOOTHING);
+    sy = lerp(prev.y, raw.y, HOUSE_SMOOTHING);
+  }
+
+  let smoothed = { x: sx, y: sy, confidence: c };
+  houseSmoothPoints[name] = smoothed;
+
+  if (c < minConf && !prev) return null;
+  return smoothed;
+}
+
+// 기준선 업데이트
+function updateHouseBodyHeights() {
+  let nose = houseGetPart("nose");
+  let ls = houseGetPart("left_shoulder");
+  let rs = houseGetPart("right_shoulder");
+
+  if (nose) houseHeadY = nose.y;
+  if (ls && rs) houseChestY = (ls.y + rs.y) / 2;
+}
+
+// -------------------- 메인 draw (메인 sketch에서 phase===3 && selectedGame==="house"일 때 호출) --------------------
+function drawHouseGame() {
+  background(0);
+
+  if (houseVideo) {
+    image(houseVideo, 0, 0, width, height);
+  }
+
+  if (houseCurrentPose) drawHouseKeypoints();
+
+  if (!houseStepDone && houseCurrentPose) {
+    if (houseStep === 1)      houseUpdateAxe();
+    else if (houseStep === 2) houseUpdateSaw();
+    else if (houseStep === 3) houseUpdateHammer();
+    else if (houseStep === 4) houseUpdateWave();
+  }
+
+  drawHouseUI();
+
+  // 다 끝난 뒤 QR 페이지로 넘기고 싶으면:
+  // if (houseStepDone) {
+  //   goToQR();  // 메인 sketch.js에 이런 함수 만들어서 호출
+  // }
+}
+
+// 1단계: 도끼질
+function houseUpdateAxe() {
+  let lw = houseGetPart("left_wrist");
+  let rw = houseGetPart("right_wrist");
+  if (!lw || !rw || houseChestY == null) return;
+
+  let upOK   = lw.y < houseChestY - 30 && rw.y < houseChestY - 30;
+  let downOK = lw.y > houseChestY + 30 && rw.y > houseChestY + 30;
+
+  if (upOK) houseAxeUpStreak++;
+  else houseAxeUpStreak = 0;
+
+  if (downOK) houseAxeDownStreak++;
+  else houseAxeDownStreak = 0;
+
+  if (houseAxeState === "WAIT_UP") {
+    if (houseAxeUpStreak >= 3) {
+      houseAxeState = "READY_DOWN";
+      houseAxeTimer = 0;
+      houseAxeDownStreak = 0;
+    }
+  } else if (houseAxeState === "READY_DOWN") {
+    houseAxeTimer++;
+
+    if (houseAxeDownStreak >= 3 && houseAxeTimer < HOUSE_AXE_MAX_FRAMES) {
+      houseAxeCount++;
+      console.log("도끼질:", houseAxeCount);
+      houseAxeState = "WAIT_UP";
+      houseAxeTimer = 0;
+      houseAxeUpStreak = 0;
+      houseAxeDownStreak = 0;
+    }
+
+    if (houseAxeTimer > HOUSE_AXE_MAX_FRAMES * 2) {
+      houseAxeState = "WAIT_UP";
+      houseAxeTimer = 0;
+      houseAxeUpStreak = 0;
+      houseAxeDownStreak = 0;
+    }
+  }
+
+  if (houseAxeCount >= 1) {
+    houseStep = 2;
+    console.log("1단계 완료 → 2단계");
+  }
+}
+
+
+// 2단계: 톱질
+function houseUpdateSaw() {
+  let lw = houseGetPart("left_wrist");
+  let rw = houseGetPart("right_wrist");
+  if (!lw || !rw) return;
+
+  let handsClose = abs(lw.x - rw.x) < 140;
+  if (!handsClose) {
+    houseSawLeftStreak = 0;
+    houseSawRightStreak = 0;
+    return;
+  }
+
+  let avgX = (lw.x + rw.x) / 2;
+  let center = width / 2;
+  let leftZone = center - 60;
+  let rightZone = center + 60;
+
+  let inLeft = avgX < leftZone;
+  let inRight = avgX > rightZone;
+
+  if (inLeft) houseSawLeftStreak++;
+  else houseSawLeftStreak = 0;
+
+  if (inRight) houseSawRightStreak++;
+  else houseSawRightStreak = 0;
+
+  if (houseSawState === "LEFT") {
+    if (houseSawRightStreak >= 3) {
+      houseSawState = "RIGHT";
+      houseSawLeftStreak = 0;
+    }
+  } else if (houseSawState === "RIGHT") {
+    if (houseSawLeftStreak >= 3) {
+      houseSawState = "LEFT";
+      houseSawRightStreak = 0;
+      houseSawCycles++;
+      console.log("톱질 cycles:", houseSawCycles);
+    }
+  }
+
+  if (houseSawCycles >= 3) {
+    houseStep = 3;
+    console.log("2단계 완료 → 3단계");
+  }
+}
+
+// 3단계: 망치질
+function houseUpdateHammer() {
+  let rw = houseGetPart("right_wrist");
+  if (!rw || houseChestY == null) return;
+
+  let upper = houseChestY - 25;
+  let lower = houseChestY + 25;
+
+  let isUp = rw.y < upper;
+  let isDown = rw.y > lower;
+
+  if (isUp) houseHammerUpStreak++;
+  else houseHammerUpStreak = 0;
+
+  if (isDown) houseHammerDownStreak++;
+  else houseHammerDownStreak = 0;
+
+  if (houseHammerState === "UP") {
+    if (houseHammerDownStreak >= 3) {
+      houseHammerState = "DOWN";
+      houseHammerUpStreak = 0;
+    }
+  } else if (houseHammerState === "DOWN") {
+    if (houseHammerUpStreak >= 3) {
+      houseHammerState = "UP";
+      houseHammerDownStreak = 0;
+      houseHammerCycles++;
+      console.log("망치 cycles:", houseHammerCycles);
+    }
+  }
+
+  if (houseHammerCycles >= 5) {
+    houseStep = 4;
+    console.log("3단계 완료 → 4단계");
+  }
+}
+
+
+// 4단계: 인사
+function houseUpdateWave() {
+  let rw = houseGetPart("right_wrist");
+  if (!rw) return;
+
+  let centerX = width / 2;
+  let leftBorder = centerX - 40;
+  let rightBorder = centerX + 40;
+
+  let isLeft = rw.x < leftBorder;
+  let isRight = rw.x > rightBorder;
+
+  if (isLeft) houseWaveLeftStreak++;
+  else houseWaveLeftStreak = 0;
+
+  if (isRight) houseWaveRightStreak++;
+  else houseWaveRightStreak = 0;
+
+  if (houseWaveState === "LEFT") {
+    if (houseWaveRightStreak >= 3) {
+      houseWaveState = "RIGHT";
+      houseWaveLeftStreak = 0;
+    }
+  } else if (houseWaveState === "RIGHT") {
+    if (houseWaveLeftStreak >= 3) {
+      houseWaveState = "LEFT";
+      houseWaveRightStreak = 0;
+      houseWaveCycles++;
+      console.log("인사 cycles:", houseWaveCycles);
+    }
+  }
+
+  if (houseWaveCycles >= 3) {
+    houseStepDone = true;
+  }
+}
+
+// 디버그용 키포인트
+function drawHouseKeypoints() {
+  noStroke();
+
+  let names = [
+    "nose",
+    "left_shoulder",
+    "right_shoulder",
+    "left_wrist",
+    "right_wrist",
+  ];
+
+  for (let name of names) {
+    let raw = houseCurrentPose.keypoints.find((k) => k.name === name);
+    let smoothed = houseSmoothPoints[name];
+    if (!raw && !smoothed) continue;
+
+    let x = smoothed ? smoothed.x : raw.x;
+    let y = smoothed ? smoothed.y : raw.y;
+
+    let c = raw ? raw.confidence : 0;
+    let r = map(c, 0, 1, 255, 0);
+    let g = map(c, 0, 1, 0, 255);
+
+    fill(r, g, 0);
+    ellipse(x, y, 10, 10);
+  }
+}
+
+function drawHouseUI() {
+  fill(0, 180);
+  rect(0, 0, width, 60);
+
+  fill(255);
+  textSize(20);
+  textAlign(CENTER, CENTER);
+
+  let desc = "";
+  if (houseStep === 1)
+    desc = "1단계) 도끼질: 양손 깍지를 끼고, 머리 위에서 아래로 크게 내리세요!";
+  else if (houseStep === 2)
+    desc = `2단계) 톱질: 옆으로 서서 양손 깍지를 끼고, 앞뒤로 크게 왕복하세요! (${houseSawCycles}/3)`;
+  else if (houseStep === 3)
+    desc = `3단계) 망치질: 오른손을 위아래로 왕복하세요! (${houseHammerCycles}/5)`;
+  else if (houseStep === 4)
+    desc = `4단계) 집들이 인사: 오른손을 좌우로 흔들어 보세요! (${houseWaveCycles}/3)`;
+  if (houseStepDone)
+    desc = "🎉 집 짓기 완료! 손님들과 즐거운 시간을 보내세요!🎉";
+
+  text(desc, width / 2, 30);
+}
