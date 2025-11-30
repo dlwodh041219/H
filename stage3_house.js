@@ -77,7 +77,7 @@ function setupHouseGame() {
   houseChestY = null;
 
   // BodyPose 로드 & 시작
-  houseBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
+  houseBodyPose = ml5.bodyPose("MoveNet", { flipped: false }, () => {
     console.log("House BodyPose ready");
     houseBodyPose.detectStart(houseVideo, gotHousePoses);
   });

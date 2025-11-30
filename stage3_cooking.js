@@ -32,8 +32,6 @@ let cookGestureActive = false;
 
 // ================== 초기화 (메인에서 호출) ==================
 function setupCookingGame() {
-  createCanvas(640, 480);  // 만약 이미 메인에서 캔버스를 만들었다면 이 줄은 삭제!
-
   // cam
   cookVideo = createCapture(VIDEO);
   cookVideo.size(width, height);

@@ -49,7 +49,7 @@ function setupAnimalGame() {
   animalVideo.hide();
 
   // BodyPose
-  animalBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
+  animalBodyPose = ml5.bodyPose("MoveNet", { flipped: false }, () => {
     console.log("Animal BodyPose ready");
     animalBodyPose.detectStart(animalVideo, animalGotPoses);
   });
