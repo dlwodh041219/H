@@ -1,30 +1,25 @@
-let fontSurround;
-let fontHand;
+let fontStart;      // 첫 페이지 폰트 (Recipekorea)
+let fontTemplate;   // 템플릿 페이지 폰트 (komi)
 let img;
 
-let phase = 1;           // 1: 첫 화면, 2: 템플릿 선택, 3: 게임, 4: QR
-let selectedGame = null; // "animal" | "cooking" | "house"
+// 화면 단계: 1 = 시작 화면, 2 = 템플릿 선택, 3 = 각 게임 화면
+let phase = 1;
+let selectedGame = null;
 
-let animal;
-let cook;
-let house;
-let human;
+// 템플릿 카드 공통 크기/위치
+const CARD_W = 170;
+const CARD_H = 300;
+const CARD_Y = 235;   // 카드들을 더 위로 올림
 
 function preload() {
-  fontSurround = loadFont("surround.ttf");
-  fontHand = loadFont("hand.ttf");
-  img = loadImage("pen.jpeg");
-
-  animal = loadImage("animal.png");
-  cook   = loadImage("cook.png");
-  house  = loadImage("house.png");
-  human  = loadImage("human.png");
+  fontStart    = loadFont("Recipekorea.ttf");
+  fontTemplate = loadFont("komi.otf");
+  img          = loadImage("pen.jpeg");
 }
 
 function setup() {
   createCanvas(640, 480);
   noCursor();
-  console.log("✅ main setup 실행됨");
 }
 
 function draw() {
@@ -33,10 +28,8 @@ function draw() {
   } else if (phase === 2) {
     drawTemplatePage();
   } else if (phase === 3) {
-    if (selectedGame === "animal")      drawAnimalGame();
-    else if (selectedGame === "cooking") drawCookingGame();
-    else if (selectedGame === "house")   drawHouseGame();
-  } // else if (phase === 4) { drawQRPage(); // 나중에 구현}
+    drawGamePage();
+  }
 
   // 공통 커서 (손가락)
   push();
@@ -48,15 +41,16 @@ function draw() {
   pop();
 }
 
-/* ================== 첫 페이지 (원래 디자인) ================== */
+/* ================== 1단계: 첫 페이지 ================== */
 
 function drawStartPage() {
   background(215, 240, 249);
 
   //"Emoji-Coreo"
   push();
-  textFont(fontHand);
+  textFont(fontTemplate);
   fill(0);
+  noStroke();
   textSize(15);
   text("Emoji-Coreo", 485, 185);
   pop();
@@ -68,13 +62,13 @@ function drawStartPage() {
   pop();
 
   //"이모지 코레오"
-  textSize(60);
   textAlign(CENTER);
   push();
-  textFont(fontSurround);
+  textFont(fontStart);
   fill(247, 207, 99);
   stroke(0);
   strokeWeight(3);
+  textSize(60);
   text("이모지 코레오", width / 2, 150);
 
   //"나만의"
@@ -124,110 +118,118 @@ function drawStartPage() {
   }
   pop();
 
-  // 이모티콘 장식들 (처음 크기 그대로)
+  // 이모티콘 장식들 (크게 유지)
   push();
   translate(500, 268);
   rotate(radians(20));
+  noStroke();
+  textSize(40);
   text("🐶", 0, 0);
   pop();
 
   push();
   translate(120, 300);
   rotate(radians(-30));
+  textSize(40);
   text("😚", 0, 0);
   pop();
 
   push();
   translate(90, 415);
   rotate(radians(10));
+  textSize(40);
   text("🔨", 0, 0);
   pop();
 
   push();
   translate(540, 435);
   rotate(radians(10));
+  textSize(40);
   text("🏠", 0, 0);
   pop();
 
   push();
   translate(230, 245);
   rotate(radians(-10));
+  textSize(40);
   text("👕", 0, 0);
   pop();
 
   push();
   translate(570, 345);
   rotate(radians(10));
+  textSize(40);
   text("🥞", 0, 0);
   pop();
 }
 
-/* ================== 두 번째 페이지: 템플릿 선택 ================== */
+/* ================== 2단계: 템플릿 선택 페이지 ================== */
 
 function drawTemplatePage() {
   background(215, 240, 249);
 
-  // 상단 제목 – 첫 페이지랑 같은 폰트
+  // 상단 제목 — 더 위로, 굵게, 윤곽선 없음
   push();
-  textFont(fontSurround);
+  textFont(fontTemplate);
   textAlign(CENTER, CENTER);
   fill(0);
-  stroke(255);
-  strokeWeight(3);
-  textSize(38);
-  text("어떤 게임을 플레이 할까요?", width / 2, 55);
+  noStroke();
+  textStyle(BOLD);
+  textSize(40);
+  text("어떤 게임을 플레이 할까요?", width / 2, 35);
+  textStyle(NORMAL);
   pop();
 
-  // 카드 설정
-  const cardW = 180;
-  const cardH = 320;
-  const yCenter = 260;   // 조금 아래로 내려서 제목과 안 겹치게
+  const cardW = CARD_W;
+  const cardH = CARD_H;
+  const yCenter = CARD_Y;
 
-  const x1 = 120;
+  // 카드 간격 조금 더 넓게
+  const x1 = 110;
   const x2 = width / 2;
-  const x3 = width - 120;
+  const x3 = width - 110;
 
-  // 호버 체크
   const hover1 = isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH);
   const hover2 = isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH);
   const hover3 = isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH);
 
-  // 카드 1: 동물 키우기
+  // 카드 1: 동물 키우기 (🐶) — 상단 설명만 13pt
   drawTemplateCard(
     x1,
     yCenter,
     cardW,
     cardH,
     "두 손에 간식을 들고 강아지에게 내밀듯,\n두 손을 앞으로 쭉 뻗어주세요!",
-    animal,
+    "🐶",
     "몽글몽글 동물 키우기",
-    "귀여운 동물을 키우고 교감해보아요!",
-    hover1
+    "귀여운 동물을 키우고\n교감해보아요!",
+    hover1,
+    13               // ★ 상단 설명 크기 override
   );
 
-  // 카드 2: 요리하기
+  // 카드 2: 요리하기 (🥞) — 상단 설명 14pt (기본값)
   drawTemplateCard(
     x2,
     yCenter,
     cardW,
     cardH,
     "팬을 흔들어요.\n두 손을 좌우로 동시에 흔들기.",
-    cook,
+    "🥞",
     "오늘은 내가 요리사",
-    "직접 맛있는 음식을 요리하고 자랑해보세요!",
+    "직접 맛있는 음식을\n요리하고 자랑해보세요!",
     hover2
   );
 
-  // 카드 3: 집 짓기
+  // 카드 3: 집 짓기 (🏠) — 상단 설명 14pt (기본값)
   drawTemplateCard(
     x3,
     yCenter,
     cardW,
     cardH,
     "망치질!\n오른손만 위아래로 움직여 보세요.",
-    house,
+    "🏠",
     "나만의 집 짓기",
-    "나만의 집을 짓고 손님을 불러 집들이를 해보아요!",
+    "나만의 집을 짓고 손님을 불러\n집들이를 해보아요!",
     hover3
   );
 }
@@ -241,62 +243,101 @@ function isInsideCard(mx, my, cx, cy, w, h) {
     my < cy + h / 2
   );
 }
-// 카드 하나 그리기 (글씨 크기만 조절한 버전)
+
+// 카드 하나 그리기
 function drawTemplateCard(
   cx,
   cy,
   w,
   h,
   topText,
-  iconImg,
+  icon,           // 문자열(이모지)
   bottomTitle,
   bottomDesc,
-  hovered
+  hovered,
+  topSizeOverride // 상단 설명 폰트 크기만 카드별로 조정 (옵션)
 ) {
+  const baseTopSize   = 14;  // 기본 상단 설명 크기
+  const baseTitleSize = 18;  // 제목 크기 (모든 카드 공통)
+  const baseDescSize  = 13;  // 아래 설명 크기 (모든 카드 공통)
+
+  // override가 있으면 그 값 사용, 없으면 기본값 14
+  const topSize = topSizeOverride || baseTopSize;
+
   push();
   rectMode(CENTER);
 
-  // 카드 뒤 파란 배경
+  // 바깥 패널
   noStroke();
-  fill(100, 130, 170, hovered ? 230 : 190);
-  rect(cx, cy, w + 20, h + 20, 20);
+  fill(115, 124, 150, hovered ? 255 : 235);
+  rect(cx, cy, w + 24, h + 32, 20);
 
-  // 카드 본체
-  fill(245);
-  rect(cx, cy, w, h, 40);
+  // 안쪽 카드
+  fill(230, 230, 233);
+  rect(cx, cy, w, h, 50);
 
   // ===== 상단 동작 설명 =====
   textAlign(CENTER, TOP);
-  textFont(fontSurround);
+  textFont(fontTemplate);
   fill(0);
-  textSize(11);                  // 13 → 11 로 축소
-  text(topText, cx, cy - h / 2 + 25);
+  noStroke();
+  textSize(topSize);                 // ★ 카드별 상단 설명 크기
+  text(topText, cx, cy - h / 2 + 24);
 
-  // 사람 실루엣
-  imageMode(CENTER);
-  const humanY = cy - 30;
-  image(human, cx, humanY, 90, 120);
+  // ===== 사람 실루엣 (👤) =====
+  const humanY = cy - 20;
+  push();
+  textAlign(CENTER, CENTER);
+  textSize(72);
+  textFont("sans-serif");
+  text("👤", cx, humanY);
+  pop();
 
-  // 아이콘 (동물/요리/집)
+  // ===== 아이콘 (게임별 이모지) =====
   const iconY = cy + 70;
-  image(iconImg, cx, iconY, 70, 70);
+  push();
+  textAlign(CENTER, CENTER);
+  textSize(56);
+  textFont("sans-serif");
+  text(icon, cx, iconY);
+  pop();
 
   // ===== 아래 제목 =====
   textAlign(CENTER, TOP);
-  textFont(fontSurround);
-  textSize(14);                  // 16 → 14
+  textFont(fontTemplate);
+  textStyle(BOLD);
+  textSize(baseTitleSize);           // ★ 항상 18pt
   fill(0);
-  text(bottomTitle, cx, cy + h / 2 + 8);
+  text(bottomTitle, cx, cy + h / 2 + 26);
 
   // ===== 아래 설명 =====
-  textFont(fontSurround);
-  textSize(10);                  // 12 → 10
+  textStyle(NORMAL);
+  textFont(fontTemplate);
+  textSize(baseDescSize);            // ★ 항상 13pt
   fill(40);
-  text(bottomDesc, cx, cy + h / 2 + 30);
+  text(bottomDesc, cx, cy + h / 2 + 52);
 
   pop();
 }
 
+/* ================== 3단계: 각 게임 페이지 (임시) ================== */
+
+function drawGamePage() {
+  background(240);
+  textAlign(CENTER, CENTER);
+  textFont(fontTemplate);
+  fill(0);
+  noStroke();
+  textSize(28);
+
+  let label = "";
+  if (selectedGame === "animal") label = "동물 키우기 게임 시작!";
+  else if (selectedGame === "cooking") label = "요리하기 게임 시작!";
+  else if (selectedGame === "house") label = "집 짓기 게임 시작!";
+  else label = "게임이 선택되지 않았습니다.";
+
+  text(label, width / 2, height / 2);
+}
 
 /* ================== 클릭 처리 ================== */
 
@@ -304,41 +345,35 @@ function mousePressed() {
   // 1단계: START 화면 → 템플릿 화면으로 이동
   if (phase === 1) {
     if (mouseX < 495 && mouseX > 145 && mouseY < 410 && mouseY > 290) {
-      phase = 2;   // 템플릿 선택 페이지로 이동
+      phase = 2;
     }
   }
-
-  // 2단계: 템플릿 선택 페이지 — 여기 코드가 들어감
+  // 2단계: 템플릿 선택 페이지 — 카드 클릭
   else if (phase === 2) {
-
-    const cardW = 180;
-    const cardH = 320;
-    const yCenter = 260;
-    const x1 = 120;
+    const cardW = CARD_W;
+    const cardH = CARD_H;
+    const yCenter = CARD_Y;
+    const x1 = 110;
     const x2 = width / 2;
-    const x3 = width - 120;
+    const x3 = width - 110;
 
-    // 카드 1: 동물 키우기
     if (isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH)) {
       selectedGame = "animal";
-      setupAnimalGame();   // 호출됨
+      setupAnimalGame();
       phase = 3;
-    }
-
-    // 카드 2: 요리하기
-    else if (isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH)) {
+    } else if (isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH)) {
       selectedGame = "cooking";
-      setupCookingGame();  // 호출됨
+      setupCookingGame();
       phase = 3;
-    }
-
-    // 카드 3: 집 짓기
-    else if (isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH)) {
+    } else if (isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH)) {
       selectedGame = "house";
-      setupHouseGame();    // 호출됨
+      setupHouseGame();
       phase = 3;
     }
   }
-
-  // (선택사항) phase===3일 때 개별 게임에서 mousePressed 필요하면 여기서 route 가능
 }
+
+/* ========== 게임별 setup (임시 더미 함수) ========== */
+function setupAnimalGame() { console.log("Animal game setup"); }
+function setupCookingGame() { console.log("Cooking game setup"); }
+function setupHouseGame() { console.log("House game setup"); }
