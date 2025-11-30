@@ -406,7 +406,7 @@ function drawUI(){
   let desc = "";
   if (currentStep === 1) desc = "1단계) 재료 손질: 오른손을 머리 위에서 아래로 크게 3회 내리세요!";
   else if (currentStep === 2) desc = "2단계) 재료 넣기: 양손을 머리 위에서 아래로 크게 3회 내리세요!";
-  else if (currentStep === 3) desc = "3단계) 재료 볶기: 왼손을 왼쪽에서 오른쪽으로 크게 3회 움직이세요!";
+  else if (currentStep === 3) desc = "3단계) 재료 볶기: 왼손을 주먹 쥐고 왼쪽에서 오른쪽으로 크게 3회 움직이세요!";
   else if (currentStep === 4) desc = "4단계) 간보기: 입을 크게 3회 벌리세요!"
   
   if (stepDone) desc = "요리하기 완료! 사랑하는 사람들과 음식을 나누세요!"
