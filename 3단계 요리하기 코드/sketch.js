@@ -23,7 +23,7 @@ let chopUpStreak = 0;
 let chopDownStreak = 0;
 let chopCycles = 0; // 왕복카운트
 let chopTimer = 0;
-let CHOP_MAX_FRAMES = 40; 
+let CHOP_MAX_FRAMES = 80; 
 
 // stage2: pour ingredients
 let bothState = "WAIT_UP";
@@ -329,7 +329,7 @@ function updateTaste() {
   if (!upperLip || !lowerLip) return;
   
   let distMouth = dist(upperLip[0], upperLip[1], lowerLip[0], lowerLip[1]);
-  let isOpen = distMouth > mouthOpenThres;
+  let isOpen = distMouth > mouthOpenThres * 0.75;
   
   if (isOpen) {
     tasteOpenStreak++;
