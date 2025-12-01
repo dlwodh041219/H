@@ -256,8 +256,8 @@ function updateFry(){
   let centerX = width/2;
   
   // 왼쪽 오른쪽 영역 기준선
-  let leftZone = centerX - 60;
-  let rightZone = centerX + 60;
+  let leftZone = centerX - 40;
+  let rightZone = centerX + 40;
   
   let leftOK = lw.x < leftZone;
   let rightOK = lw.x > rightZone;
@@ -272,30 +272,17 @@ function updateFry(){
   // state machine
   if (fryState === "WAIT_LEFT"){
     if(fryLeftStreak >= 3){
-      fryState = "READY_RIGHT";
-      fryTimer = 0;
+      fryState = "WAIT_RIGHT";
+      // fryTimer = 0;
       fryRightStreak = 0;
     }
   }
-  else if (fryState === "READY_RIGHT"){
-    fryTimer++;
-    
-    if(fryRightStreak>=3 && fryTimer<FRY_MAX_FRAMES){
+  else if (fryState === "WAIT_RIGHT"){
+    if(fryRightStreak>=3){
+      fryState = "WAIT_LEFT";
+      fryLeftState = 0;
       fryCycles++;
       console.log("재료 볶기 횟수:", fryCycles);
-      
-      // 초기화
-      fryState = "WAIT_LEFT";
-      fryTimer = 0;
-      fryLeftStreak = 0;
-      fryRightStreak = 0;
-    }
-    
-    if (fryTimer > FRY_MAX_FRAMES*2){
-      fryState = "WAIT_LEFT";
-      fryTimer = 0;
-      fryLeftStreak = 0;
-      fryRightStreak = 0;
     }
   }
   
