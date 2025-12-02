@@ -10,9 +10,9 @@ let gameMode = "intro";
 let gameIntroStartTime = 0;
 
 // 템플릿 카드 공통 크기/위치
-const CARD_W = 170;
-const CARD_H = 300;
-const CARD_Y = 235;   // 카드들을 더 위로 올림
+let CARD_W = 170;
+let CARD_H = 300;
+let CARD_Y = 235;   // 카드들을 더 위로 올림
 
 function preload() {
   fontStart    = loadFont("Recipekorea.ttf");
@@ -101,11 +101,11 @@ function drawStartPage() {
   pop();
 
   // START 버튼 범위
-  const btnLeft = 145;
-  const btnRight = 495;
-  const btnTop = 290;
-  const btnBottom = 410;
-  const hoverStart =
+  let btnLeft = 145;
+  let btnRight = 495;
+  let btnTop = 290;
+  let btnBottom = 410;
+  let hoverStart =
     mouseX < btnRight && mouseX > btnLeft &&
     mouseY < btnBottom && mouseY > btnTop;
 
@@ -201,18 +201,18 @@ function drawTemplatePage() {
   textStyle(NORMAL);
   pop();
 
-  const cardW = CARD_W;
-  const cardH = CARD_H;
-  const yCenter = CARD_Y;
+  let cardW = CARD_W;
+  let cardH = CARD_H;
+  let yCenter = CARD_Y;
 
   // 카드 간격 조금 더 넓게
-  const x1 = 110;
-  const x2 = width / 2;
-  const x3 = width - 110;
+  let x1 = 110;
+  let x2 = width / 2;
+  let x3 = width - 110;
 
-  const hover1 = isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH);
-  const hover2 = isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH);
-  const hover3 = isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH);
+  let hover1 = isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH);
+  let hover2 = isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH);
+  let hover3 = isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH);
 
   // 카드 1: 동물 키우기 (🐶) — 상단 설명만 13pt
   drawTemplateCard(
@@ -278,12 +278,12 @@ function drawTemplateCard(
   hovered,
   topSizeOverride // 상단 설명 폰트 크기만 카드별로 조정 (옵션)
 ) {
-  const baseTopSize   = 14;  // 기본 상단 설명 크기
-  const baseTitleSize = 18;  // 제목 크기 (모든 카드 공통)
-  const baseDescSize  = 13;  // 아래 설명 크기 (모든 카드 공통)
+  let baseTopSize   = 14;  // 기본 상단 설명 크기
+  let baseTitleSize = 18;  // 제목 크기 (모든 카드 공통)
+  let baseDescSize  = 13;  // 아래 설명 크기 (모든 카드 공통)
 
   // override가 있으면 그 값 사용, 없으면 기본값 14
-  const topSize = topSizeOverride || baseTopSize;
+  let topSize = topSizeOverride || baseTopSize;
 
   push();
   rectMode(CENTER);
@@ -306,7 +306,7 @@ function drawTemplateCard(
   text(topText, cx, cy - h / 2 + 24);
 
   // ===== 사람 실루엣 (👤) =====
-  const humanY = cy - 20;
+  let humanY = cy - 20;
   push();
   textAlign(CENTER, CENTER);
   textSize(72);
@@ -315,7 +315,7 @@ function drawTemplateCard(
   pop();
 
   // ===== 아이콘 (게임별 이모지) =====
-  const iconY = cy + 70;
+  let iconY = cy + 70;
   push();
   textAlign(CENTER, CENTER);
   textSize(56);
@@ -371,12 +371,12 @@ function mousePressed() {
   }
   // 2단계: 템플릿 선택 페이지 — 카드 클릭
   else if (phase === 2) {
-    const cardW = CARD_W;
-    const cardH = CARD_H;
-    const yCenter = CARD_Y;
-    const x1 = 110;
-    const x2 = width / 2;
-    const x3 = width - 110;
+    let cardW = CARD_W;
+    let cardH = CARD_H;
+    let yCenter = CARD_Y;
+    let x1 = 110;
+    let x2 = width / 2;
+    let x3 = width - 110;
 
     if (isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH)) {
       selectedGame = "animal";
