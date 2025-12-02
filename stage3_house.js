@@ -43,7 +43,7 @@ let houseWaveRightStreak = 0;
 // 초기화 (메인에서 phase=3 진입할 때 호출)
 function setupHouseGame() {
   // 카메라
-  houseVideo = createCapture(VIDEO, { flipped: true });
+  houseVideo = createCapture(VIDEO)
   houseVideo.size(640, 480);
   houseVideo.hide();
 
@@ -77,7 +77,7 @@ function setupHouseGame() {
   houseChestY = null;
 
   // BodyPose 로드 & 시작
-  houseBodyPose = ml5.bodyPose("MoveNet", { flipped: false }, () => {
+  houseBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
     console.log("House BodyPose ready");
     houseBodyPose.detectStart(houseVideo, gotHousePoses);
   });
@@ -135,11 +135,15 @@ function drawHouseGame() {
   background(0);
 
   if (houseVideo) {
+    push();
+    translate(width, 0);
+    scale(-1, 1);
     image(houseVideo, 0, 0, width, height);
+    pop();
   }
 
   if (houseCurrentPose) drawHouseKeypoints();
-
+  
   if (!houseStepDone && houseCurrentPose) {
     if (houseStep === 1)      houseUpdateAxe();
     else if (houseStep === 2) houseUpdateSaw();

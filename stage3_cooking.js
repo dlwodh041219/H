@@ -1,317 +1,474 @@
 let cookVideo;
 let cookBodyPose;
 let cookPoses = [];
+let cookCurrentPose = null;
 
-// clmtrackr
-let cookTracker;
-let cookMouthOpenThreshold = 20;
-let cookOpenFrameCount = 0;
-let cookRequiredFrames = 5;
+// 기준선
+let cookHeadY = null;
+let cookChestY = null;
+
+// 매끄럽게 (스무딩)
+let cookSmoothPoints = {};
+let COOK_SMOOTHING = 0.6;
+let COOK_BASE_MIN_CONF = 0.15;
 
 // 게임 단계
-// 0: 재료 썰기
-// 1: 팬 넣기
-// 2: 볶기
-// 3: 간보기(입벌림)
-// 4: 완료
 let cookStage = 0;
-let cookDetectedText = "";
 let cookStageDone = false;
+let cookDetectedText = "";
 
-// Wrist History
-const COOK_HISTORY = 20;
-let cookRightWristYHist = [];
-let cookLeftWristYHist = [];
-let cookRightWristXHist = [];
-let cookLeftWristXHist = [];
+// 1단계: 재료 썰기
+let cookChopState = "WAIT_UP";
+let cookChopUpStreak = 0;
+let cookChopDownStreak = 0;
+let cookChopCycles = 0;
+let cookChopTimer = 0;
+let COOK_CHOP_MAX_FRAMES = 80;
 
-const COOK_TARGET_REPS = 3;
-let cookRepCount = 0;
-let cookGestureActive = false;
+// 2단계: 재료 넣기
+let cookBothState = "WAIT_UP";
+let cookBothUpStreak = 0;
+let cookBothDownStreak = 0;
+let cookBothCycles = 0;
+let cookBothTimer = 0;
+let COOK_BOTH_MAX_FRAMES = 40;
 
+// 3단계: 볶기
+let cookFryState = "LEFT";
+let cookFryCycles = 0;
+let cookFryLeftStreak = 0;
+let cookFryRightStreak = 0;
 
-// ================== 초기화 (메인에서 호출) ==================
+// 4단계: 간보기(입벌리기)
+let cookTracker;
+let cookMouthOpenThres = 20;
+
+let cookTasteState = "WAIT_OPEN";
+let cookTasteCycles = 0;
+let cookTasteOpenStreak = 0;
+let cookTasteCloseStreak = 0;
+
+let COOK_TASTE_OPEN_FRAMES = 3;
+let COOK_TASTE_CLOSE_FRAMES = 3;
+let COOK_TASTE_TARGET = 3;
+
 function setupCookingGame() {
-  // cam
+  // 카메라
   cookVideo = createCapture(VIDEO);
   cookVideo.size(width, height);
   cookVideo.hide();
 
-  // BodyPose
+  // BodyPose (MoveNet)
   cookBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
     console.log("cook bodyPose ready");
     cookBodyPose.detectStart(cookVideo, cookGotPoses);
   });
 
-  // Face tracking
+  // Face tracking (clmtrackr)
   cookTracker = new clm.tracker();
   cookTracker.init();
   cookTracker.start(cookVideo.elt);
 
-  cookStage = 0;
-  cookDetectedText = "";
-  cookStageDone = false;
-  cookRepCount = 0;
-  cookGestureActive = false;
-  cookResetHistory();
-
-  cookOpenFrameCount = 0;
-
+  // 상태 리셋
+  cookResetState();
   textFont("Arial");
 }
 
-function cookGotPoses(results) {
-  cookPoses = results || [];
+function cookResetState() {
+  cookPoses = [];
+  cookCurrentPose = null;
+
+  cookHeadY = null;
+  cookChestY = null;
+  cookSmoothPoints = {};
+
+  cookStage = 0;
+  cookStageDone = false;
+  cookDetectedText = "";
+
+  cookChopState = "WAIT_UP";
+  cookChopUpStreak = 0;
+  cookChopDownStreak = 0;
+  cookChopCycles = 0;
+  cookChopTimer = 0;
+
+  cookBothState = "WAIT_UP";
+  cookBothUpStreak = 0;
+  cookBothDownStreak = 0;
+  cookBothCycles = 0;
+  cookBothTimer = 0;
+
+  cookFryState = "LEFT";
+  cookFryCycles = 0;
+  cookFryLeftStreak = 0;
+  cookFryRightStreak = 0;
+
+  cookTasteState = "WAIT_OPEN";
+  cookTasteCycles = 0;
+  cookTasteOpenStreak = 0;
+  cookTasteCloseStreak = 0;
 }
 
+// BodyPose 콜백
+function cookGotPoses(results) {
+  cookPoses = results || [];
+  cookCurrentPose = cookPoses[0] || null;
 
-// ================== 메인 draw (메인 sketch에서 호출) ==================
+  if (cookCurrentPose) cookUpdateBodyHeights();
+}
+
+// BodyPose 유틸 
+function cookGetPart(name, minConf = COOK_BASE_MIN_CONF) {
+  if (!cookCurrentPose || !cookCurrentPose.keypoints) {
+    return cookSmoothPoints[name] || null;
+  }
+
+  let raw = cookCurrentPose.keypoints.find((k) => k.name === name);
+  let prev = cookSmoothPoints[name];
+
+  if (!raw) {
+    // 관절이 아예 안 보이면 이전 값 유지
+    return prev || null;
+  }
+
+  // confidence 필드 이름이 다를 수 있어서 둘 다 체크
+  let c = raw.confidence !== undefined ? raw.confidence : raw.score;
+
+  let sx, sy;
+  if (!prev) {
+    sx = raw.x;
+    sy = raw.y;
+  } else {
+    sx = lerp(prev.x, raw.x, COOK_SMOOTHING);
+    sy = lerp(prev.y, raw.y, COOK_SMOOTHING);
+  }
+
+  let smoothed = { x: sx, y: sy, confidence: c };
+  cookSmoothPoints[name] = smoothed;
+
+  // confidence 낮고 이전값도 없으면 null
+  if (c < minConf && !prev) {
+    return null;
+  }
+  return smoothed;
+}
+
+// 기준선 업데이트
+function cookUpdateBodyHeights() {
+  let nose = cookGetPart("nose");
+  let ls = cookGetPart("left_shoulder");
+  let rs = cookGetPart("right_shoulder");
+
+  if (nose) cookHeadY = nose.y;
+  if (ls && rs) cookChestY = (ls.y + rs.y) / 2;
+}
+
 function drawCookingGame() {
   background(0);
 
-  // mirror
+  // 영상 미러링
   push();
   translate(width, 0);
   scale(-1, 1);
   image(cookVideo, 0, 0, width, height);
   pop();
 
+  // 안내 텍스트
   cookDrawStageInfo();
 
-  // -------- 4단계: Face tracking --------
+  // 4단계: Face tracking (입 벌리기)만 별도로 처리
   if (cookStage === 3) {
-    cookRunFaceTracking();
+    cookUpdateTaste();
     return;
   }
 
-  // -------- 1~3단계: BodyPose --------
-  if (cookPoses.length > 0) {
-    let pose = cookPoses[0];
-
-    let rw = pose.right_wrist;
-    let lw = pose.left_wrist;
-    let ls = pose.left_shoulder;
-    let rs = pose.right_shoulder;
-
-    if (!rw || !lw || !ls || !rs) return;
-
-    let shoulderY = (ls.y + rs.y) / 2;
-    let shoulderWidth = dist(ls.x, ls.y, rs.x, rs.y);
-
-    cookUpdateHistory(rw, lw);
-
+  // 1~3단계: BodyPose
+  if (!cookStageDone && cookCurrentPose) {
     if (cookStage === 0) {
-      cookHandleReps(cookCheckChopGesture(shoulderWidth));
+      cookUpdateChop();
     } else if (cookStage === 1) {
-      cookHandleReps(cookCheckPutIntoPanGesture(shoulderY, shoulderWidth));
+      cookUpdatePour();
     } else if (cookStage === 2) {
-      cookHandleReps(cookCheckStirGesture(shoulderY, shoulderWidth));
-    } else if (cookStage === 4) {
-      cookDrawStageInfo();
-      return;
+      cookUpdateFry();
     }
-
-    cookDrawDebugPoints(pose);
   }
 
-  // 모든 단계 완료 후 QR 페이지로 넘기고 싶다면:
-  // if (cookStageDone && typeof goToQR === "function") {
-  //   goToQR();
-  // }
+  // 디버깅용 키포인트 표시
+  if (cookCurrentPose && cookStage !== 3 && cookStage !== 4) {
+    cookDrawKeypoints();
+  }
+}
+
+// 1단계: 재료 썰기
+function cookUpdateChop() {
+  let rw = cookGetPart("right_wrist");
+  if (!rw || cookChestY == null) return;
+
+  // 기준선
+  let upOK = rw.y < cookChestY - 30;
+  let downOK = rw.y > cookChestY + 30;
+
+  // streak 누적
+  if (upOK) cookChopUpStreak++;
+  else cookChopUpStreak = 0;
+
+  if (downOK) cookChopDownStreak++;
+  else cookChopDownStreak = 0;
+
+  if (cookChopState === "WAIT_UP") {
+    if (cookChopUpStreak >= 3) {
+      cookChopState = "READY_DOWN";
+      cookChopTimer = 0;
+      cookChopDownStreak = 0;
+    }
+  } else if (cookChopState === "READY_DOWN") {
+    cookChopTimer++;
+
+    // 위 → 아래 1회
+    if (cookChopDownStreak >= 3 && cookChopTimer < COOK_CHOP_MAX_FRAMES) {
+      cookChopCycles++;
+      console.log("재료 썰기 횟수:", cookChopCycles);
+
+      cookDetectedText = `1단계 재료 썰기: ${cookChopCycles}/3`;
+
+      // 초기화
+      cookChopState = "WAIT_UP";
+      cookChopTimer = 0;
+      cookChopUpStreak = 0;
+      cookChopDownStreak = 0;
+    }
+  }
+
+  if (cookChopCycles >= 3) {
+    cookStage = 1; // 2단계로
+    cookDetectedText = "1단계 완료! → 2단계로 이동";
+    console.log("1단계 완료 → 2단계!");
+  }
 }
 
 
-// ================== 4단계: Face Tracking ==================
-function cookRunFaceTracking() {
+// 2단계: 재료 넣기
+function cookUpdatePour() {
+  let lw = cookGetPart("left_wrist");
+  let rw = cookGetPart("right_wrist");
+  if (!lw || !rw || cookChestY == null) return;
+
+  let upOK = lw.y < cookChestY - 30 && rw.y < cookChestY - 30;
+  let downOK = lw.y > cookChestY + 30 && rw.y > cookChestY + 30;
+
+  if (upOK) cookBothUpStreak++;
+  else cookBothUpStreak = 0;
+
+  if (downOK) cookBothDownStreak++;
+  else cookBothDownStreak = 0;
+
+  if (cookBothState === "WAIT_UP") {
+    if (cookBothUpStreak >= 3) {
+      cookBothState = "READY_DOWN";
+      cookBothTimer = 0;
+      cookBothDownStreak = 0;
+    }
+  } else if (cookBothState === "READY_DOWN") {
+    cookBothTimer++;
+
+    if (cookBothDownStreak >= 3 && cookBothTimer < COOK_BOTH_MAX_FRAMES) {
+      cookBothCycles++;
+      console.log("재료 넣기 횟수:", cookBothCycles);
+
+      cookDetectedText = `2단계 재료 넣기: ${cookBothCycles}/3`;
+
+      cookBothState = "WAIT_UP";
+      cookBothTimer = 0;
+      cookBothUpStreak = 0;
+      cookBothDownStreak = 0;
+    }
+  }
+
+  if (cookBothCycles >= 3) {
+    cookStage = 2; // 3단계로
+    cookDetectedText = "2단계 완료! → 3단계로 이동";
+    console.log("2단계 완료 → 3단계!");
+  }
+}
+
+
+// 3단계: 볶기
+function cookUpdateFry() {
+  // 오른손 위치
+  let rw = cookGetPart("right_wrist", 0.05);
+  if (!rw) {
+    rw = cookGetPart("right_elbow", 0.05);
+    if (!rw) return;
+  }
+
+  // 오른쪽 어깨 기준선
+  let rs = cookGetPart("right_shoulder");
+  if (!rs) return;
+
+  let shoulderX = rs.x;
+
+  // 어깨에서 좌/우로 40px 떨어진 지점을 경계로
+  let leftBorder = shoulderX - 40;
+  let rightBorder = shoulderX + 40;
+
+  let isLeft = rw.x < leftBorder;
+  let isRight = rw.x > rightBorder;
+
+  if (isLeft) cookFryLeftStreak++;
+  else cookFryLeftStreak = 0;
+
+  if (isRight) cookFryRightStreak++;
+  else cookFryRightStreak = 0;
+
+  if (cookFryState === "LEFT") {
+    if (cookFryRightStreak >= 3) {
+      cookFryState = "RIGHT";
+      cookFryLeftStreak = 0;
+    }
+  } else if (cookFryState === "RIGHT") {
+    if (cookFryLeftStreak >= 3) {
+      cookFryState = "LEFT";
+      cookFryRightStreak = 0;
+      cookFryCycles++;
+      console.log("볶기 횟수:", cookFryCycles);
+
+      cookDetectedText = `3단계 볶기: ${cookFryCycles}/3`;
+    }
+  }
+
+  if (cookFryCycles >= 3) {
+    cookStage = 3; // 4단계(간보기)
+    cookDetectedText = "3단계 완료! → 4단계(간보기)로 이동";
+    console.log("3단계 완료 → 4단계!");
+  }
+}
+
+
+// 4단계: 간보기(입 벌리기)
+function cookUpdateTaste() {
   let positions = cookTracker.getCurrentPosition();
   if (!positions) return;
 
-  // 포인트 표시
+  fill(255);
+  stroke(0);
+
+  // 좌우 반전해서 그리기
+  let mirrored = [];
   for (let i = 0; i < positions.length; i++) {
-    let x = width - positions[i][0];   // 좌우 반전
+    let x = width - positions[i][0];
     let y = positions[i][1];
+    mirrored[i] = [x, y];
     circle(x, y, 5);
   }
 
-  let upperLip = positions[57];
-  let lowerLip = positions[60];
+  // 입 포인트 (clmtrackr 인덱스)
+  let upperLip = mirrored[57];
+  let lowerLip = mirrored[60];
   if (!upperLip || !lowerLip) return;
 
-  let mouthOpenDist = dist(
+  let distMouth = dist(
     upperLip[0],
     upperLip[1],
     lowerLip[0],
     lowerLip[1]
   );
 
-  if (mouthOpenDist > cookMouthOpenThreshold) {
-    cookOpenFrameCount++;
+  let isOpen = distMouth > cookMouthOpenThres * 0.75;
+
+  if (isOpen) {
+    cookTasteOpenStreak++;
+    cookTasteCloseStreak = 0;
   } else {
-    cookOpenFrameCount = 0;
+    cookTasteCloseStreak++;
+    cookTasteOpenStreak = 0;
   }
 
-  if (cookOpenFrameCount === cookRequiredFrames) {
-    cookDetectedText = "4단계(간보기) 완료! 🎉 전체 미션 클리어!";
+  // 상태 머신
+  if (cookTasteState === "WAIT_OPEN") {
+    if (cookTasteOpenStreak >= COOK_TASTE_OPEN_FRAMES) {
+      cookTasteState = "WAIT_CLOSE";
+    }
+  } else if (cookTasteState === "WAIT_CLOSE") {
+    if (cookTasteCloseStreak >= COOK_TASTE_CLOSE_FRAMES) {
+      cookTasteCycles++;
+      console.log("간보기 벌리기 횟수:", cookTasteCycles);
+
+      cookTasteState = "WAIT_OPEN";
+      cookTasteOpenStreak = 0;
+      cookTasteCloseStreak = 0;
+
+      cookDetectedText = `4단계 간보기: ${cookTasteCycles}/${COOK_TASTE_TARGET}`;
+    }
+  }
+
+  // 완료
+  if (cookTasteCycles >= COOK_TASTE_TARGET && !cookStageDone) {
+    console.log("간보기 3회 완료!");
     cookStage = 4;
     cookStageDone = true;
+    cookDetectedText =
+      "🎉요리 완료! 사랑하는 사람들과 음식을 나눠 보세요!🎉";
   }
 }
 
-// ================= 반복 처리 ==================
-function cookHandleReps(isDoingGesture) {
-  if (isDoingGesture) {
-    if (!cookGestureActive) {
-      cookGestureActive = true;
-      cookRepCount++;
+// 디버깅용 키포인트 표시
+function cookDrawKeypoints() {
+  noStroke();
 
-      if (cookStage === 0)
-        cookDetectedText = `1단계 재료 썰기: ${cookRepCount}/${COOK_TARGET_REPS}`;
-      if (cookStage === 1)
-        cookDetectedText = `2단계 팬 넣기: ${cookRepCount}/${COOK_TARGET_REPS}`;
-      if (cookStage === 2)
-        cookDetectedText = `3단계 볶기: ${cookRepCount}/${COOK_TARGET_REPS}`;
+  let names = [
+    "nose",
+    "left_shoulder",
+    "right_shoulder",
+    "left_wrist",
+    "right_wrist",
+  ];
 
-      if (cookRepCount >= COOK_TARGET_REPS) cookAdvanceStage();
-    }
-  } else {
-    cookGestureActive = false;
+  for (let name of names) {
+    let raw =
+      cookCurrentPose.keypoints &&
+      cookCurrentPose.keypoints.find((k) => k.name === name);
+    let smoothed = cookSmoothPoints[name];
+    if (!raw && !smoothed) continue;
+
+    let x = smoothed ? smoothed.x : raw.x;
+    let y = smoothed ? smoothed.y : raw.y;
+
+    // confidence 시각화 (녹-노-빨)
+    let c =
+      raw && (raw.confidence !== undefined ? raw.confidence : raw.score);
+    if (c == null) c = 0;
+
+    let r = map(c, 0, 1, 255, 0);
+    let g = map(c, 0, 1, 0, 255);
+
+    fill(r, g, 0);
+    ellipse(x, y, 10, 10);
   }
 }
 
-function cookAdvanceStage() {
-  let prev = cookStage;
-  cookStage++;
-  cookRepCount = 0;
-  cookGestureActive = false;
-  cookResetHistory();
-
-  if (prev === 0) cookDetectedText = "1단계 완료! → 2단계로";
-  if (prev === 1) cookDetectedText = "2단계 완료! → 3단계로";
-  if (prev === 2) cookDetectedText = "3단계 완료! → 4단계(간보기)로";
-  if (prev === 3)
-    cookDetectedText = "모든 단계 완료! 사랑하는 사람들과 음식을 나눠보세요🤤";
-}
-
-
-// ================== 화면 표시 ==================
+// 화면 표시(UI)
 function cookDrawStageInfo() {
+  fill(0, 180);
+  rect(0, 0, width, 60);
+
   fill(255);
   textSize(18);
+  textAlign(LEFT, CENTER);
 
   let txt = "";
   if (cookStage === 0)
-    txt = "1단계) 재료 썰기: 오른손 위↔아래 3회!";
+    txt = "1단계) 재료 손질: 오른손을 머리 위에서 아래로 크게 3회 내리세요!";
   else if (cookStage === 1)
-    txt = "2단계) 팬 넣기: 양손 위↔아래 3회!";
+    txt = "2단계) 재료 넣기: 양손을 머리 위에서 아래로 크게 3회 내리세요!";
   else if (cookStage === 2)
-    txt = "3단계) 볶기: 양손 좌↔우 3회!";
+    txt = "3단계) 재료 볶기: 오른손을 왼쪽↔오른쪽으로 크게 3회 움직이세요!";
   else if (cookStage === 3)
-    txt = "4단계) 간보기: 입 벌리기!";
+    txt = "4단계) 간보기: 입을 크게 벌렸다 닫는 동작을 3회 하세요!";
   else if (cookStage === 4)
-    txt = "모든 단계 완료!";
+    txt = "요리하기 완료! 사랑하는 사람들과 음식을 나누세요!";
 
-  text(txt, 10, 25);
+  text(txt, 10, 20);
+
   textSize(16);
-  text(cookDetectedText, 10, 50);
-}
-
-function cookDrawDebugPoints(pose) {
-  noStroke();
-  if (pose.nose) {
-    fill(255, 0, 0);
-    circle(pose.nose.x, pose.nose.y, 10);
-  }
-  if (pose.right_wrist) {
-    fill(0, 255, 0);
-    circle(pose.right_wrist.x, pose.right_wrist.y, 10);
-  }
-  if (pose.left_wrist) {
-    fill(0, 0, 255);
-    circle(pose.left_wrist.x, pose.left_wrist.y, 10);
-  }
-  if (pose.left_shoulder) {
-    fill(255, 255, 0);
-    circle(pose.left_shoulder.x, pose.left_shoulder.y, 10);
-  }
-  if (pose.right_shoulder) {
-    fill(255, 255, 0);
-    circle(pose.right_shoulder.x, pose.right_shoulder.y, 10);
-  }
-}
-
-
-// ================== 히스토리 ==================
-function cookUpdateHistory(rw, lw) {
-  cookRightWristYHist.push(rw.y);
-  cookLeftWristYHist.push(lw.y);
-  cookRightWristXHist.push(rw.x);
-  cookLeftWristXHist.push(lw.x);
-
-  if (cookRightWristYHist.length > COOK_HISTORY) {
-    cookRightWristYHist.shift();
-    cookLeftWristYHist.shift();
-    cookRightWristXHist.shift();
-    cookLeftWristXHist.shift();
-  }
-}
-
-function cookResetHistory() {
-  cookRightWristYHist = [];
-  cookLeftWristYHist = [];
-  cookRightWristXHist = [];
-  cookLeftWristXHist = [];
-}
-
-function cookRangeOf(arr) {
-  if (arr.length === 0) return 0;
-
-  let minVal = arr[0];
-  let maxVal = arr[0];
-
-  for (let i = 1; i < arr.length; i++) {
-    if (arr[i] < minVal) {
-      minVal = arr[i];
-    }
-    if (arr[i] > maxVal) {
-      maxVal = arr[i];
-    }
-  }
-
-  return maxVal - minVal;
-}
-
-
-// ================== 제스처 판정 ==================
-function cookCheckChopGesture(shoulderWidth) {
-  if (cookRightWristYHist.length < COOK_HISTORY) return false;
-
-  let rY = cookRangeOf(cookRightWristYHist);
-  let rX = cookRangeOf(cookRightWristXHist);
-  let lY = cookRangeOf(cookLeftWristYHist);
-
-  return (
-    rY > 0.6 * shoulderWidth &&
-    rX < 1.0 * shoulderWidth &&
-    rY > lY * 1.3
-  );
-}
-
-function cookCheckPutIntoPanGesture(shoulderY, shoulderWidth) {
-  if (cookRightWristYHist.length < COOK_HISTORY) {
-    return false;
-  }
-
-  let rY = cookRangeOf(cookRightWristYHist);
-  let lY = cookRangeOf(cookLeftWristYHist);
-
-  return rY > 0.6 * shoulderWidth && lY > 0.6 * shoulderWidth;
-}
-
-function cookCheckStirGesture(shoulderY, shoulderWidth) {
-  if (cookRightWristXHist.length < COOK_HISTORY) return false;
-
-  let rX = cookRangeOf(cookRightWristXHist);
-  let lX = cookRangeOf(cookLeftWristXHist);
-
-  return rX > 0.7 * shoulderWidth && lX > 0.7 * shoulderWidth;
+  text(cookDetectedText, 10, 45);
 }

@@ -6,6 +6,9 @@ let img;
 let phase = 1;
 let selectedGame = null;
 
+let gameMode = "intro";
+let gameIntroStartTime = 0;
+
 // 템플릿 카드 공통 크기/위치
 const CARD_W = 170;
 const CARD_H = 300;
@@ -28,7 +31,25 @@ function draw() {
   } else if (phase === 2) {
     drawTemplatePage();
   } else if (phase === 3) {
-    drawGamePage();
+    if (gameMode === "intro") {
+      drawGamePage(); 
+
+      // 자동으로 n초 뒤에 실제 게임으로 전환
+      if (millis() - gameIntroStartTime > 1500) { // 1.5초 정도
+        gameMode = "play";
+      }
+
+    } else if (gameMode === "play") {
+      if (selectedGame === "animal") {
+        drawAnimalGame();
+      } else if (selectedGame === "cooking") {
+        drawCookingGame();
+      } else if (selectedGame === "house") {
+        drawHouseGame();
+      } else {
+        drawGamePage(); // 혹시 selectedGame이 null일 때 대비
+      }
+    }
   }
 
   // 공통 커서 (손가락)
@@ -360,20 +381,21 @@ function mousePressed() {
     if (isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH)) {
       selectedGame = "animal";
       setupAnimalGame();
+      gameMode = "intro";          
+      gameIntroStartTime = millis();
       phase = 3;
     } else if (isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH)) {
       selectedGame = "cooking";
+      gameMode = "intro";          
+      gameIntroStartTime = millis();
       setupCookingGame();
       phase = 3;
     } else if (isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH)) {
       selectedGame = "house";
+      gameMode = "intro";          
+      gameIntroStartTime = millis();
       setupHouseGame();
       phase = 3;
     }
   }
 }
-
-/* ========== 게임별 setup (임시 더미 함수) ========== */
-function setupAnimalGame() { console.log("Animal game setup"); }
-function setupCookingGame() { console.log("Cooking game setup"); }
-function setupHouseGame() { console.log("House game setup"); }
