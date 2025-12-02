@@ -452,23 +452,22 @@ function cookDrawStageInfo() {
   rect(0, 0, width, 60);
 
   fill(255);
-  textSize(18);
-  textAlign(LEFT, CENTER);
+  textSize(20);
+  textAlign(CENTER, CENTER);
 
-  let txt = "";
-  if (cookStage === 0)
-    txt = "1단계) 재료 손질: 오른손을 머리 위에서 아래로 크게 3회 내리세요!";
-  else if (cookStage === 1)
-    txt = "2단계) 재료 넣기: 양손을 머리 위에서 아래로 크게 3회 내리세요!";
-  else if (cookStage === 2)
-    txt = "3단계) 재료 볶기: 오른손을 왼쪽↔오른쪽으로 크게 3회 움직이세요!";
-  else if (cookStage === 3)
-    txt = "4단계) 간보기: 입을 크게 벌렸다 닫는 동작을 3회 하세요!";
-  else if (cookStage === 4)
-    txt = "요리하기 완료! 사랑하는 사람들과 음식을 나누세요!";
+  let desc = "";
+  if (cookStage === 0) {
+    desc = `1단계) 재료 손질: 오른손을 머리 위에서 아래로 크게 3회 내리세요! (${cookChopCycles}/3)`;
+  } else if (cookStage === 1) {
+    desc = `2단계) 재료 넣기: 양손을 머리 위에서 아래로 크게 3회 내리세요! (${cookBothCycles}/3)`;
+  } else if (cookStage === 2) {
+    desc = `3단계) 재료 볶기: 오른손을 왼쪽↔오른쪽으로 크게 3회 움직여요! (${cookFryCycles}/3)`;
+  } else if (cookStage === 3) {
+    desc = `4단계) 간보기: 입을 크게 벌렸다 닫는 동작을 3회 하세요! (${cookTasteCycles}/3)`;
+  } else if (cookStage === 4) {
+    // 전 단계 다 끝난 뒤
+    desc = `🎉요리하기 완료! 사랑하는 사람들과 음식을 나누세요!🎉`;
+  }
 
-  text(txt, 10, 20);
-
-  textSize(16);
-  text(cookDetectedText, 10, 45);
+  text(desc, width / 2, 30);
 }
