@@ -41,7 +41,7 @@ let houseWaveLeftStreak = 0;
 let houseWaveRightStreak = 0;
 
 // 초기화 (메인에서 phase=3 진입할 때 호출)
-function setupHouseGame() {
+function initHouseGame() {
   // 카메라
   houseVideo = createCapture(VIDEO)
   houseVideo.size(640, 480);

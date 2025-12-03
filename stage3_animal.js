@@ -1,6 +1,3 @@
-// ================== 동물 키우기 3단계 모듈 ==================
-
-// ---- BodyPose ----
 let animalVideo;
 let animalBodyPose;
 let animalPoses = [];
@@ -40,16 +37,16 @@ const ANIMAL_SWING_MAX_FRAMES = 30;
 
 
 // ================== 초기화 (메인에서 호출) ==================
-function setupAnimalGame() {
-  // ⚠ 메인 sketch.js에서 이미 createCanvas(640, 480)를 했다면 여기서는 또 안 해도 됨
+function initAnimalGame() {
+  // ❗ createCanvas는 main_sketch.js에서만!
 
   // 카메라
-  animalVideo = createCapture(VIDEO, { flipped: true });
+  animalVideo = createCapture(VIDEO);
   animalVideo.size(640, 480);
   animalVideo.hide();
 
-  // BodyPose
-  animalBodyPose = ml5.bodyPose("MoveNet", { flipped: false }, () => {
+  // BodyPose (MoveNet, 좌우반전)
+  animalBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
     console.log("Animal BodyPose ready");
     animalBodyPose.detectStart(animalVideo, animalGotPoses);
   });
@@ -98,7 +95,7 @@ function animalGetPart(name, minConf = ANIMAL_BASE_MIN_CONF) {
 
   if (!raw) return prev || null;
 
-  let c = raw.confidence;
+  let c = raw.confidence !== undefined ? raw.confidence : raw.score;
   let sx, sy;
 
   if (!prev) {
@@ -126,12 +123,17 @@ function animalUpdateBodyHeights() {
 }
 
 
-// ================== 메인 draw (메인에서 phase===3 && selectedGame==="animal"일 때) ==================
+// ================== 메인 draw에서 호출 ==================
 function drawAnimalGame() {
   background(255);
 
   if (animalVideo) {
+    // 영상도 좌우반전 (BodyPose flipped:true와 일치)
+    push();
+    translate(width, 0);
+    scale(-1, 1);
     image(animalVideo, 0, 0, width, height);
+    pop();
   }
 
   if (animalCurrentStep === 1) {
@@ -174,13 +176,11 @@ function drawAnimalGame() {
       animalSwingTimer = 0;
     }
 
-    // 모든 단계 완료 후 QR 페이지로 넘어가고 싶으면:
     // if (animalCurrentStep > 4 && typeof goToQR === "function") {
     //   goToQR();
     // }
   }
 }
-
 
 // ================== 1단계: 안아주기 (양팔 크게 벌리고 3초 유지) ==================
 function animalDetectOpenArms() {

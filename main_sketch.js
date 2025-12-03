@@ -2,12 +2,16 @@ let fontStart;      // 첫 페이지 폰트 (Recipekorea)
 let fontTemplate;   // 템플릿 페이지 폰트 (komi)
 let img;
 
-// 화면 단계: 1 = 시작 화면, 2 = 템플릿 선택, 3 = 각 게임 화면
+// 화면 단계: 1 = 시작 화면, 2 = 템플릿 선택, 3 = 이모지 선택, 4 = 각 게임 화면
 let phase = 1;
 let selectedGame = null;
 
 let gameMode = "intro";
 let gameIntroStartTime = 0;
+
+let animalInited = false;
+let cookingInited = false;
+let houseInited = false;
 
 // 템플릿 카드 공통 크기/위치
 let CARD_W = 170;
@@ -23,6 +27,8 @@ function preload() {
 function setup() {
   createCanvas(640, 480);
   noCursor();
+
+  setupAvatar();
 }
 
 function draw() {
@@ -31,6 +37,8 @@ function draw() {
   } else if (phase === 2) {
     drawTemplatePage();
   } else if (phase === 3) {
+    drawAvatarScene();
+  } else if (phase === 4) {
     if (gameMode === "intro") {
       drawGamePage(); 
 
@@ -40,17 +48,32 @@ function draw() {
       }
 
     } else if (gameMode === "play") {
-      if (selectedGame === "animal") {
-        drawAnimalGame();
-      } else if (selectedGame === "cooking") {
-        drawCookingGame();
-      } else if (selectedGame === "house") {
-        drawHouseGame();
-      } else {
-        drawGamePage(); // 혹시 selectedGame이 null일 때 대비
+    if (selectedGame === "animal") {
+      if (!animalInited) {
+        initAnimalGame();      // ★ 첫 진입 시에만 카메라/모델 초기화
+        animalInited = true;
       }
+      drawAnimalGame();
+
+    } else if (selectedGame === "cooking") {
+      if (!cookingInited) {
+        initCookingGame();     // ★ 여기서 createCapture, BodyPose 세팅
+        cookingInited = true;
+      }
+      drawCookingGame();
+
+    } else if (selectedGame === "house") {
+      if (!houseInited) {
+        initHouseGame();       // ★ 집 짓기용 초기화
+        houseInited = true;
+      }
+      drawHouseGame();
+
+    } else {
+      drawGamePage();
     }
   }
+}
 
   // 공통 커서 (손가락)
   push();
@@ -342,7 +365,6 @@ function drawTemplateCard(
 }
 
 /* ================== 3단계: 각 게임 페이지 (임시) ================== */
-
 function drawGamePage() {
   background(240);
   textAlign(CENTER, CENTER);
@@ -359,8 +381,6 @@ function drawGamePage() {
 
   text(label, width / 2, height / 2);
 }
-
-/* ================== 클릭 처리 ================== */
 
 function mousePressed() {
   // 1단계: START 화면 → 템플릿 화면으로 이동
@@ -380,22 +400,29 @@ function mousePressed() {
 
     if (isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH)) {
       selectedGame = "animal";
-      setupAnimalGame();
-      gameMode = "intro";          
-      gameIntroStartTime = millis();
       phase = 3;
+      scene = 0;
     } else if (isInsideCard(mouseX, mouseY, x2, yCenter, cardW, cardH)) {
       selectedGame = "cooking";
-      gameMode = "intro";          
-      gameIntroStartTime = millis();
-      setupCookingGame();
       phase = 3;
+      scene = 0;
     } else if (isInsideCard(mouseX, mouseY, x3, yCenter, cardW, cardH)) {
       selectedGame = "house";
-      gameMode = "intro";          
-      gameIntroStartTime = millis();
-      setupHouseGame();
       phase = 3;
+      scene = 0;
     }
   }
+  // 3단계: 이모지 선택
+  else if (phase === 3) {
+    if (scene === 0) {
+      // 아바타(사람/동물) 선택 화면
+      mousePressedAvatar();
+    } else if (scene === 1) {
+      // 사람 이모지 커스터마이징 화면
+      mousePressedHumanEmoji();
+    } else if (scene === 2) {
+      // 동물 이모지 커스터마이징 화면 (나중에 구현)
+      // mousePressedAnimalEmoji();  // 아직 안 만들었으면 주석
+    }
+  }mousePressedAvatar();
 }

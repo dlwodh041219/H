@@ -52,7 +52,7 @@ let COOK_TASTE_OPEN_FRAMES = 3;
 let COOK_TASTE_CLOSE_FRAMES = 3;
 let COOK_TASTE_TARGET = 3;
 
-function setupCookingGame() {
+function initCookingGame() {
   // 카메라
   cookVideo = createCapture(VIDEO);
   cookVideo.size(width, height);
