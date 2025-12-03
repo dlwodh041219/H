@@ -8,10 +8,20 @@ let noseImg1;
 let noseImg2;
 let noseImg3;
 let noseImg4;
+let mouthImg1;
+let mouthImg2;
+let mouthImg3;
+let mouthImg4;
+let browImg1;
+let browImg2;
+let browImg3;
+let browImg4;
 
 // null 대신 번호로 관리
 let selectedEyeNumber = 0;
 let selectedNoseNumber = 0;
+let selectedMouthNum = 0;
+let selectedBrowNum = 0;
 
 // 버튼 정보
 let eyeBtn1 = { x: 0, y: 0, w: 35, h: 30 };
@@ -24,24 +34,43 @@ let noseBtn2 = { x: 0, y: 0, w: 35, h: 30 };
 let noseBtn3 = { x: 0, y: 0, w: 35, h: 30 };
 let noseBtn4 = { x: 0, y: 0, w: 35, h: 30 };
 
+let mouthBtn1 = { x: 0, y: 0, w: 35, h: 30 };
+let mouthBtn2 = { x: 0, y: 0, w: 35, h: 30 };
+let mouthBtn3 = { x: 0, y: 0, w: 35, h: 30 };
+let mouthBtn4 = { x: 0, y: 0, w: 35, h: 30 };
+
+let browBtn1 = { x: 0, y: 0, w: 35, h: 30 };
+let browBtn2 = { x: 0, y: 0, w: 35, h: 30 };
+let browBtn3 = { x: 0, y: 0, w: 35, h: 30 };
+let browBtn4 = { x: 0, y: 0, w: 35, h: 30 };
+
 function setup() {
   createCanvas(640, 480);
   capture = createCapture(VIDEO)
   capture.hide()
   pixelDensity(1)
 
-  faceImg = loadImage('face.png')
-  eyeImg1 = loadImage('eye1.png')
-  eyeImg2 = loadImage('eye2.png')
-  eyeImg3 = loadImage('eye3.png')
-  eyeImg4 = loadImage('eye4.png')
+  faceImg = loadImage('face.png');
+  eyeImg1 = loadImage('eye1.png');
+  eyeImg2 = loadImage('eye2.png');
+  eyeImg3 = loadImage('eye3.png');
+  eyeImg4 = loadImage('eye4.png');
   
-  noseImg1 = loadImage('nose1.png')
-  noseImg2 = loadImage('nose2.png')
-  noseImg3 = loadImage('nose3.png')
-  noseImg4 = loadImage('nose4.png')
+  noseImg1 = loadImage('nose1.png');
+  noseImg2 = loadImage('nose2.png');
+  noseImg3 = loadImage('nose3.png');
+  noseImg4 = loadImage('nose4.png');
+  
+  mouthImg1 = loadImage('mouth1.png');
+  mouthImg2 = loadImage('mouth2.png');
+  mouthImg3 = loadImage('mouth3.png');
+  mouthImg4 = loadImage('mouth4.png');
+  
+  browImg1 = loadImage('brow1.png');
+  browImg2 = loadImage('brow2.png');
+  browImg3 = loadImage('brow3.png');
+  browImg4 = loadImage('brow4.png');
 }
-
 function draw() {
   background(215,240,249);
 
@@ -78,6 +107,26 @@ function draw() {
     image(noseImg3, width/4, 210, 60, 45);
   } else if(selectedNoseNumber === 4){
     image(noseImg4, width/4, 210, 60, 45);
+  }
+  
+  if (selectedMouthNum === 1){
+    image(mouthImg1, width/4, 230,60,45);
+  } else if (selectedMouthNum === 2){
+    image(mouthImg2, width/4,230,60,45);
+  } else if (selectedMouthNum === 3){
+    image(mouthImg3,width/4,230,60,45);
+  } else if (selectedMouthNum === 4){
+    image(mouthImg4,width/4,230,50,35);
+  }
+  
+  if (selectedBrowNum === 1){
+    image(browImg1, width/4,180,60,45);
+  } else if (selectedBrowNum === 2){
+    image(browImg2, width/4,180,60,45);
+  } else if (selectedBrowNum === 3){
+    image(browImg3,width/4,180,60,45);
+  } else if (selectedBrowNum === 4){
+    image(browImg4,width/4,180,60,45);
   }
   pop()
 
@@ -127,6 +176,32 @@ function draw() {
   noseBtn4.x = width/2 + intervalX*3 + 23;
   noseBtn4.y = 2*margin + intervalY*2 + 20;
   
+  // 입 버튼 위치
+  mouthBtn1.x = width/2 + 23
+  mouthBtn1.y = 2*margin + intervalY*3 +30;
+
+  mouthBtn2.x = width/2 + intervalX + 23;
+  mouthBtn2.y = 2*margin + intervalY*3 + 30;
+  
+  mouthBtn3.x = width/2 + intervalX*2 + 23;
+  mouthBtn3.y = 2*margin + intervalY*3 + 30;
+  
+  mouthBtn4.x = width/2 + intervalX*3 + 23;
+  mouthBtn4.y = 2*margin + intervalY*3 + 30;
+  
+  // 눈썹 버튼 위치
+  browBtn1.x = width/2 + 23
+  browBtn1.y = 2*margin + 10;
+
+  browBtn2.x = width/2 + intervalX + 23;
+  browBtn2.y = 2*margin + 10;
+  
+  browBtn3.x = width/2 + intervalX*2 + 23;
+  browBtn3.y = 2*margin + 10;
+  
+  browBtn4.x = width/2 + intervalX*3 + 23;
+  browBtn4.y = 2*margin + 10;
+  
 
   drawButton(eyeImg1, eyeBtn1);
   drawButton(eyeImg2, eyeBtn2);
@@ -137,6 +212,16 @@ function draw() {
   drawButton(noseImg2, noseBtn2);
   drawButton(noseImg3, noseBtn3);
   drawButton(noseImg4, noseBtn4);
+  
+  drawButton(mouthImg1, mouthBtn1);
+  drawButton(mouthImg2, mouthBtn2);
+  drawButton(mouthImg3, mouthBtn3);
+  drawButton(mouthImg4, mouthBtn4);
+  
+  drawButton(browImg1, browBtn1);
+  drawButton(browImg2, browBtn2);
+  drawButton(browImg3, browBtn3);
+  drawButton(browImg4, browBtn4);
   
 }
 
@@ -167,6 +252,7 @@ function isMouseOver(btn) {
 // 클릭하면 선택 상태 바꾸기
 // -------------------------------
 function mousePressed() {
+  // 눈 버튼
   if (isMouseOver(eyeBtn1)) {
     selectedEyeNumber = 1;   // null 대신 1
   }
@@ -180,6 +266,7 @@ function mousePressed() {
     selectedEyeNumber = 4;   // null 대신 2
   }
   
+  // 코 버튼
   if (isMouseOver(noseBtn1)) {
     selectedNoseNumber = 1;
   }
@@ -192,10 +279,38 @@ function mousePressed() {
   if (isMouseOver(noseBtn4)) {
     selectedNoseNumber = 4;
   }
+  
+  // 입 버튼
+  if (isMouseOver(mouthBtn1)) {
+    selectedMouthNum = 1;
+  }
+  if (isMouseOver(mouthBtn2)) {
+    selectedMouthNum = 2;
+  }
+  if (isMouseOver(mouthBtn3)) {
+    selectedMouthNumber = 3;
+  }
+  if (isMouseOver(mouthBtn4)) {
+    selectedMouthNumber = 4;
+  }
+  
+  // 눈썹 버튼
+  if (isMouseOver(browBtn1)) {
+    selectedBrowNum = 1;
+  }
+  if (isMouseOver(browBtn2)) {
+    selectedBrowNum = 2;
+  }
+  if (isMouseOver(browBtn3)) {
+    selectedBrowNum = 3;
+  }
+  if (isMouseOver(browBtn4)) {
+    selectedBrowNum = 4;
+  }
 }
 
 function mousePressed() {
-  // eye1 버튼 클릭 처리
+  // 눈 버튼 클릭 처리
   if (isMouseOver(eyeBtn1)) {
     if (selectedEyeNumber === 1) {
       selectedEyeNumber = 0;   // 이미 선택된 버튼 → 해제
@@ -204,7 +319,6 @@ function mousePressed() {
     }
   }
 
-  // eye2 버튼 클릭 처리
   if (isMouseOver(eyeBtn2)) {
     if (selectedEyeNumber === 2) {
       selectedEyeNumber = 0;   // 이미 선택된 버튼 → 해제
@@ -239,7 +353,6 @@ function mousePressed() {
     }
   }
 
-  // eye2 버튼 클릭 처리
   if (isMouseOver(noseBtn2)) {
     if (selectedNoseNumber === 2) {
       selectedNoseNumber = 0;   // 이미 선택된 버튼 → 해제
@@ -264,6 +377,71 @@ function mousePressed() {
     }
   }
   
+  // 입 버튼
+  if (isMouseOver(mouthBtn1)) {
+    if (selectedMouthNum === 1) {
+      selectedMouthNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedMouthNum = 1;   // 선택하기
+    }
+  }
+
+  if (isMouseOver(mouthBtn2)) {
+    if (selectedMouthNum === 2) {
+      selectedMouthNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedMouthNum = 2;   // 선택하기
+    }
+  }
+  
+  if (isMouseOver(mouthBtn3)) {
+    if (selectedMouthNum === 3) {
+      selectedMouthNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedMouthNum = 3;   // 선택하기
+    }
+  }
+
+
+  if (isMouseOver(mouthBtn4)) {
+    if (selectedMouthNum === 4) {
+      selectedMouthNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedMouthNum = 4;   // 선택하기
+    }
+  }
+  
+  // 눈썹 버튼
+  if (isMouseOver(browBtn1)) {
+    if (selectedBrowNum === 1) {
+      selectedBrowNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedBrowNum = 1;   // 선택하기
+    }
+  }
+
+  if (isMouseOver(browBtn2)) {
+    if (selectedBrowNum === 2) {
+      selectedBrowNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedBrowNum = 2;   // 선택하기
+    }
+  }
+  
+  if (isMouseOver(browBtn3)) {
+    if (selectedBrowNum === 3) {
+      selectedBrowNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedBrowNum = 3;   // 선택하기
+    }
+  }
+
+
+  if (isMouseOver(browBtn4)) {
+    if (selectedBrowNum === 4) {
+      selectedBrowNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedBrowNum = 4;   // 선택하기
+    }
+  }
 }
-
-
