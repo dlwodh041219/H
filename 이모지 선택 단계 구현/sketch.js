@@ -66,7 +66,7 @@ function setup() {
   mouthImg3 = loadImage('mouth3.png');
   mouthImg4 = loadImage('mouth4.png');
   
-  browImg1 = loadImage('brow1.png');
+  browImg1 = loadImage('lash1.png');
   browImg2 = loadImage('brow2.png');
   browImg3 = loadImage('brow3.png');
   browImg4 = loadImage('brow4.png');
