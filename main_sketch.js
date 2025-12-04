@@ -420,5 +420,5 @@ function mousePressed() {
       // 동물 이모지 커스터마이징 화면 (나중에 구현)
       mousePressedAnimalEmoji();
     }
-  }mousePressedAvatar();
+  }
 }
