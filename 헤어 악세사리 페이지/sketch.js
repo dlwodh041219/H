@@ -7,8 +7,13 @@ let hairImg5;
 let hairImg6;
 let hairImg7;
 let hairImg8;
+let accImg1;
+let accImg2;
+let accImg3;
+let accImg4;
 
 let selectedHairNum = 0;
+let selectedAccNum = 0;
 
 let hairBtn1 = { x: 0, y: 0, w: 32, h: 29 };
 let hairBtn2 = { x: 0, y: 0, w: 33, h: 29 };
@@ -18,6 +23,10 @@ let hairBtn5 = { x: 0, y: 0, w: 35, h: 30 };
 let hairBtn6 = { x: 0, y: 0, w: 35, h: 30 };
 let hairBtn7 = { x: 0, y: 0, w: 35, h: 30 };
 let hairBtn8 = { x: 0, y: 0, w: 35, h: 30 };
+let accBtn1 = { x: 0, y: 0, w: 33, h: 30 };
+let accBtn2 = { x: 0, y: 0, w: 33, h: 30 };
+let accBtn3 = { x: 0, y: 0, w: 35, h: 30 };
+let accBtn4 = { x: 0, y: 0, w: 31, h: 30 };
 
 function setup(){
   createCanvas(640, 480);
@@ -30,6 +39,11 @@ function setup(){
   hairImg6 = loadImage('hair6.png');
   hairImg7 = loadImage('hair7.png');
   hairImg8 = loadImage('hair2.png');
+  
+  accImg1 = loadImage('acc1.png');
+  accImg2 = loadImage('acc2.png');
+  accImg3 = loadImage('acc3.png');
+  accImg4 = loadImage('acc4.png');
 }
 
 function draw(){
@@ -73,7 +87,15 @@ function draw(){
 } else if (selectedHairNum === 8) {
   image(hairImg8,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
 }
-  
+  if (selectedAccNum === 1) {
+    image(accImg1,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  } else if (selectedAccNum ===2 ){
+    image(accImg2, faceCenterX + 0.5, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  } else if (selectedAccNum ===3){
+    image(accImg3, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  } else if (selectedAccNum ===4 ){
+    image(accImg4,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  }
   pop()
   // 오른쪽 파트 
   textSize(15)
@@ -117,6 +139,19 @@ function draw(){
   hairBtn8.x = width/2 + intervalX*3 + 23;
   hairBtn8.y = 2*margin +intervalY + 10;
   
+  // 악세사리 버튼
+  accBtn1.x = width/2+24;
+  accBtn1.y = 2*margin+ intervalY*2 + 15;
+
+  accBtn2.x = width/2 + intervalX + 23;
+  accBtn2.y = 2*margin+ intervalY*2 + 15;
+  
+  accBtn3.x = width/2 + intervalX*2 + 23;
+  accBtn3.y = 2*margin + intervalY*2 + 15;
+  
+  accBtn4.x = width/2 + intervalX*3 + 24;
+  accBtn4.y = 2*margin + intervalY*2 + 15;
+  
   drawButton(hairImg1, hairBtn1);
   drawButton(hairImg2, hairBtn2);
   drawButton(hairImg3, hairBtn3);
@@ -125,6 +160,11 @@ function draw(){
   drawButton(hairImg6, hairBtn6);
   drawButton(hairImg7, hairBtn7);
   drawButton(hairImg8, hairBtn8);
+  
+  drawButton(accImg1, accBtn1);
+  drawButton(accImg2, accBtn2);
+  drawButton(accImg3, accBtn3);
+  drawButton(accImg4, accBtn4);
 }
 
 function drawButton(img, btn) {
@@ -146,6 +186,7 @@ function isMouseOver(btn) {
 }
 
 function mousePressed(){
+  // hair btn
   if (isMouseOver(hairBtn1)) {
     selectedHairNum = 1;   // null 대신 1
   }
@@ -168,11 +209,26 @@ function mousePressed(){
     selectedHairNum = 7;   // null 대신 2
   }
   if (isMouseOver(hairBtn8)) {
-     selectedEyeNumber = 8;   // null 대신 2
+     selectedHairNum = 8;   // null 대신 2
+  }
+  
+  // acc btn
+  if (isMouseOver(accBtn1)) {
+    selectedAccNum = 1;   // null 대신 1
+  }
+  if (isMouseOver(accBtn2)) {
+    selectedAccNum = 2;   // null 대신 2
+  }
+  if (isMouseOver(accBtn3)) {
+    selectedAccNum = 3;   // null 대신 2
+  }
+  if (isMouseOver(accBtn4)) {
+     selectedAccNumber = 4;   // null 대신 2
   }
 }
 
 function mousePressed(){
+  // hair btn
    if (isMouseOver(hairBtn1)) {
     if (selectedHairNum === 1) {
       selectedHairNum = 0;   // 이미 선택된 버튼 → 해제
@@ -235,6 +291,40 @@ function mousePressed(){
       selectedHairNum = 0;   // 이미 선택된 버튼 → 해제
     } else {
       selectedHairNum = 8;   // 선택하기
+    }
+  }
+  
+  // acc btn
+  if (isMouseOver(accBtn1)) {
+    if (selectedAccNum === 1) {
+      selectedAccNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedAccNum = 1;   // 선택하기
+    }
+  }
+
+  if (isMouseOver(accBtn2)) {
+    if (selectedAccNum === 2) {
+      selectedAccNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedAccNum = 2;   // 선택하기
+    }
+  }
+  
+  if (isMouseOver(accBtn3)) {
+    if (selectedAccNum === 3) {
+      selectedAccNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedAccNum = 3;   // 선택하기
+    }
+  }
+
+
+  if (isMouseOver(accBtn4)) {
+    if (selectedAccNum === 4) {
+      selectedAccNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedAccNum = 4;   // 선택하기
     }
   }
   
