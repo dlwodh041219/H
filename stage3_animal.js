@@ -13,12 +13,12 @@ let animalHeadY, animalChestY;
 
 // 스무딩
 let animalSmoothPoints = {};
-const ANIMAL_SMOOTHING = 0.6;
-const ANIMAL_BASE_MIN_CONF = 0.15;
+let ANIMAL_SMOOTHING = 0.6;
+let ANIMAL_BASE_MIN_CONF = 0.15;
 
 // 1단계: 안아주기(양팔 벌리기)
 let animalHoldStartTime = null;
-const ANIMAL_HOLD_DURATION = 3000; // 3초
+let ANIMAL_HOLD_DURATION = 3000; // 3초
 
 // 2단계: 밥주기(Handsfree)
 let animalFood = { x: 500, y: 100, r: 50, visible: true };
@@ -27,13 +27,13 @@ let animalBowl = { x: 320, y: 400, r: 60, visible: true };
 // 3단계: 쓰다듬기
 let animalWaveState = "DOWN";
 let animalWaveCount = 0;
-const ANIMAL_REQUIRED_WAVES = 3;
+let ANIMAL_REQUIRED_WAVES = 3;
 
 // 4단계: 동물과 놀아주기
 let animalSwingState = "WAIT_UP";
 let animalSwingCount = 0;
 let animalSwingTimer = 0;
-const ANIMAL_SWING_MAX_FRAMES = 30;
+let ANIMAL_SWING_MAX_FRAMES = 30;
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -241,9 +241,12 @@ function animalDetectOpenArms() {
 
 // ================== 2단계: 밥주기 (Handsfree) ==================
 function animalDrawObjects() {
+  push();
   textSize(100);
+  textFont("sans-serif");
   if (animalFood.visible) text("🥕", animalFood.x, animalFood.y);
   if (animalBowl.visible) text("🥣", animalBowl.x, animalBowl.y);
+  pop();
 }
 
 function animalCheckCollision(hand) {

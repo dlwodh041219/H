@@ -3,7 +3,7 @@ let humanCenter;
 let animalCenter;
 let avatarRadius = 110;
 
-// ========== 사람 이모지 커스터마이징용 변수들 ==========
+// 사람 이모지 커스터마이징용 변수들
 let humanEmojiStep = 1;
 
 let faceImg;
@@ -20,6 +20,7 @@ let selectedBrowNum = 0;
 
 // 버튼 정보
 let humanNextStepBtn = { x: 0, y: 0, w: 130, h: 40 };
+let animalNextBtn = { x: 0, y: 0, w: 130, h: 40 };
 
 let eyeBtn1 = { x: 0, y: 0, w: 35, h: 30 };
 let eyeBtn2 = { x: 0, y: 0, w: 35, h: 30 };
@@ -60,10 +61,9 @@ function drawAvatarScene() {
   }
 }
 
-/* ========== 0단계: 아바타 선택 화면 ========== */
+// scene 0: 아바타 선택 화면
 
 function drawAvatarSelect() {
-  // 제목 (굵게)
   push();
   fill(0);
   noStroke();
@@ -121,7 +121,7 @@ function drawAvatarCircle(cx, cy, r, icon, label, hovered) {
   pop();
 }
 
-/* ========== 1단계: 사람 이모지 선택 화면 ========== */
+// scene 1: 사람 이모지 선택 화면
 
 function loadHumanEmojiAssets() {
   if (humanEmojiAssetsLoaded) return;
@@ -157,9 +157,7 @@ function drawHumanEmojiPage() {
 
   let margin = 40;
 
-  // -------------------------
   // 상단 바: 제목 + '다음 단계 >' 버튼
-  // -------------------------
   push();
   fill(0);
   noStroke();
@@ -215,9 +213,7 @@ function drawHumanEmojiPage() {
     pop();
   }
 
-  // -------------------------
   // 1단계 / 2단계 화면 분기
-  // -------------------------
   if (humanEmojiStep === 1) {
     drawHumanEmojiStep1(margin);
   } else if (humanEmojiStep === 2) {
@@ -278,9 +274,7 @@ function drawHumanEmojiStep1(margin) {
   }
   pop()
 
-  // -------------------------
-  //   오른쪽 파트
-  // -------------------------
+  // 오른쪽 파트
   textSize(15)
   text('눈썹', width/2, margin + 20)
   text('눈',width/2, margin + 120)
@@ -399,9 +393,7 @@ function drawHumanEmojiStep2(margin) {
   pop();
 }
 
-// -------------------------------
 // 버튼 그리기 + 커지기
-// -------------------------------
 function drawButton(img, btn) {
   let hover = isMouseOver(btn);
   let scale = hover ? 1.3 : 1;
@@ -412,9 +404,7 @@ function drawButton(img, btn) {
   image(img, btn.x - (w - btn.w)/2, btn.y - (h - btn.h)/2, w, h);
 }
 
-// -------------------------------
 // 마우스 버튼 위에 있는지 체크
-// -------------------------------
 function isMouseOver(btn) {
   return mouseX >= btn.x &&
          mouseX <= btn.x + btn.w &&
@@ -422,10 +412,13 @@ function isMouseOver(btn) {
          mouseY <= btn.y + btn.h;
 }
 
-/* ========== 2단계: 동물 이모지 선택 화면 (임시) ========== */
+// scene 2: 동물 이모지 선택 화면 (임시)
 
 function drawAnimalEmojiPage() {
   background(214, 240, 249);
+
+  let margin = 40;
+  
   push();
   textAlign(CENTER, CENTER);
   textFont(fontTemplate);
@@ -435,9 +428,43 @@ function drawAnimalEmojiPage() {
   text("동물 이모지 선택 화면 (나중에 구현)", width / 2, height / 2);
   textStyle(NORMAL);
   pop();
-}
 
-/* ========== 클릭 처리 ========== */
+  animalNextBtn.w = 130;
+  animalNextBtn.h = 38;
+  animalNextBtn.x = width - animalNextBtn.w - margin;
+  animalNextBtn.y = margin - animalNextBtn.h / 2;
+
+  let over = isMouseOver(animalNextBtn);
+
+  push();
+  rectMode(CORNER);
+  stroke(0);
+  strokeWeight(1.5);
+  if (over) {
+    fill(255, 230, 160);         // hover 색
+  } else {
+    fill(245, 215, 140);         // 기본 색
+  }
+  rect(
+    animalNextBtn.x,
+    animalNextBtn.y,
+    animalNextBtn.w,
+    animalNextBtn.h,
+    10
+  );
+
+  fill(0);
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textFont(fontTemplate);
+  textSize(16);
+  text(
+    "게임 시작 >",
+    animalNextBtn.x + animalNextBtn.w / 2,
+    animalNextBtn.y + animalNextBtn.h / 2
+  );
+  pop();
+}
 
 function mousePressedAvatar() {
   if (scene === 0) {
@@ -505,12 +532,18 @@ function mousePressedHumanEmoji() {
   }
 
   // "게임 시작" 버튼 클릭 → stage3로 넘어가기
-  if (isMouseOver(humanNextStepBtn)) {
-    // 최소한 하나는 선택했는지 확인하고 싶으면 조건 하나 넣어도 됨
-    // if (selectedEyeNumber || selectedNoseNumber || selectedMouthNum || selectedBrowNum) { ... }
-
+  if (humanEmojiStep === 2 && isMouseOver(humanNextStepBtn)) {
     phase = 4;              // main_sketch.js의 전역 변수
-    gameMode = "intro";     // 인트로 → play 로 넘어가는 구조 유지
+    gameMode = "intro";
+    gameIntroStartTime = millis();
+  }
+}
+
+function mousePressedAnimalEmoji() {
+  // "게임 시작" 버튼 클릭 → stage3로 넘어가기
+  if (isMouseOver(animalNextBtn)) {
+    phase = 4;              // main_sketch.js의 전역 변수
+    gameMode = "intro";
     gameIntroStartTime = millis();
   }
 }

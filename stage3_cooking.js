@@ -71,7 +71,6 @@ function initCookingGame() {
 
   // 상태 리셋
   cookResetState();
-  textFont("Arial");
 }
 
 function cookResetState() {

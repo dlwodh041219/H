@@ -11,8 +11,8 @@ let houseHeadY, houseChestY;
 
 // 스무딩
 let houseSmoothPoints = {};
-const HOUSE_SMOOTHING = 0.6;
-const HOUSE_BASE_MIN_CONF = 0.15;
+let HOUSE_SMOOTHING = 0.6;
+let HOUSE_BASE_MIN_CONF = 0.15;
 
 // 1단계: 도끼질
 let houseAxeState = "WAIT_UP";
