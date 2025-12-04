@@ -11,9 +11,14 @@ let accImg1;
 let accImg2;
 let accImg3;
 let accImg4;
+let glassImg1;
+let glassImg2;
+let glassImg3;
+let glassImg4;
 
 let selectedHairNum = 0;
 let selectedAccNum = 0;
+let selectedGlassNum = 0;
 
 let hairBtn1 = { x: 0, y: 0, w: 32, h: 29 };
 let hairBtn2 = { x: 0, y: 0, w: 33, h: 29 };
@@ -27,6 +32,10 @@ let accBtn1 = { x: 0, y: 0, w: 33, h: 30 };
 let accBtn2 = { x: 0, y: 0, w: 33, h: 30 };
 let accBtn3 = { x: 0, y: 0, w: 35, h: 30 };
 let accBtn4 = { x: 0, y: 0, w: 31, h: 30 };
+let glassBtn1 = { x: 0, y: 0, w: 33, h: 30 };
+let glassBtn2 = { x: 0, y: 0, w: 33, h: 30 };
+let glassBtn3 = { x: 0, y: 0, w: 35, h: 30 };
+let glassBtn4 = { x: 0, y: 0, w: 31, h: 30 };
 
 function setup(){
   createCanvas(640, 480);
@@ -44,6 +53,11 @@ function setup(){
   accImg2 = loadImage('acc2.png');
   accImg3 = loadImage('acc3.png');
   accImg4 = loadImage('acc4.png');
+  glassImg1 = loadImage('acc5.png');
+  glassImg2 = loadImage('acc6.png');
+  glassImg3 = loadImage('acc7.png');
+  glassImg4 = loadImage('acc8.png');
+  
 }
 
 function draw(){
@@ -87,6 +101,7 @@ function draw(){
 } else if (selectedHairNum === 8) {
   image(hairImg8,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
 }
+  // acc 
   if (selectedAccNum === 1) {
     image(accImg1,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
   } else if (selectedAccNum ===2 ){
@@ -95,6 +110,17 @@ function draw(){
     image(accImg3, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
   } else if (selectedAccNum ===4 ){
     image(accImg4,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  }
+  
+  // glass
+  if (selectedGlassNum === 1) {
+    image(glassImg1,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  } else if (selectedGlassNum ===2 ){
+    image(glassImg2, faceCenterX + 0.5, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  } else if (selectedGlassNum ===3){
+    image(glassImg3, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
+  } else if (selectedGlassNum === 4 ){
+    image(glassImg4,faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight)
   }
   pop()
   // 오른쪽 파트 
@@ -128,10 +154,10 @@ function draw(){
   hairBtn4.y = 2*margin + 15;
   
   hairBtn5.x = width/2+23;
-  hairBtn5.y = 2*margin+ intervalY + 10;
+  hairBtn5.y = 2*margin+ intervalY + 12;
 
   hairBtn6.x = width/2 + intervalX + 23;
-  hairBtn6.y = 2*margin+intervalY + 10;
+  hairBtn6.y = 2*margin+intervalY + 12;
   
   hairBtn7.x = width/2 + intervalX*2 + 23;
   hairBtn7.y = 2*margin +intervalY + 10;
@@ -152,6 +178,19 @@ function draw(){
   accBtn4.x = width/2 + intervalX*3 + 24;
   accBtn4.y = 2*margin + intervalY*2 + 15;
   
+  // glass
+  glassBtn1.x = width/2+24;
+  glassBtn1.y = 2*margin+ intervalY*3 + 15;
+
+  glassBtn2.x = width/2 + intervalX + 23;
+  glassBtn2.y = 2*margin+ intervalY*3 + 15;
+  
+  glassBtn3.x = width/2 + intervalX*2 + 23;
+  glassBtn3.y = 2*margin + intervalY*3 + 15;
+  
+  glassBtn4.x = width/2 + intervalX*3 + 24;
+  glassBtn4.y = 2*margin + intervalY*3 + 15;
+  
   drawButton(hairImg1, hairBtn1);
   drawButton(hairImg2, hairBtn2);
   drawButton(hairImg3, hairBtn3);
@@ -165,6 +204,11 @@ function draw(){
   drawButton(accImg2, accBtn2);
   drawButton(accImg3, accBtn3);
   drawButton(accImg4, accBtn4);
+  
+  drawButton(glassImg1, glassBtn1);
+  drawButton(glassImg2, glassBtn2);
+  drawButton(glassImg3, glassBtn3);
+  drawButton(glassImg4, glassBtn4);
 }
 
 function drawButton(img, btn) {
@@ -224,6 +268,19 @@ function mousePressed(){
   }
   if (isMouseOver(accBtn4)) {
      selectedAccNumber = 4;   // null 대신 2
+  }
+  // glass
+  if (isMouseOver(glassBtn1)) {
+    selectedGlassNum = 1;   // null 대신 1
+  }
+  if (isMouseOver(glassBtn2)) {
+    selectedGlassNum = 2;   // null 대신 2
+  }
+  if (isMouseOver(glassBtn3)) {
+    selectedGlassNum = 3;   // null 대신 2
+  }
+  if (isMouseOver(glassBtn4)) {
+     selectedGlassNumber = 4;   // null 대신 2
   }
 }
 
@@ -325,6 +382,40 @@ function mousePressed(){
       selectedAccNum = 0;   // 이미 선택된 버튼 → 해제
     } else {
       selectedAccNum = 4;   // 선택하기
+    }
+  }
+  
+  // glass
+  if (isMouseOver(glassBtn1)) {
+    if (selectedGlassNum === 1) {
+      selectedGlassNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedGlassNum = 1;   // 선택하기
+    }
+  }
+
+  if (isMouseOver(glassBtn2)) {
+    if (selectedGlassNum === 2) {
+      selectedGlassNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedGlassNum = 2;   // 선택하기
+    }
+  }
+  
+  if (isMouseOver(glassBtn3)) {
+    if (selectedGlassNum === 3) {
+      selectedGlassNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedGlassNum = 3;   // 선택하기
+    }
+  }
+
+
+  if (isMouseOver(glassBtn4)) {
+    if (selectedGlassNum === 4) {
+      selectedGlassNum = 0;   // 이미 선택된 버튼 → 해제
+    } else {
+      selectedGlassNum = 4;   // 선택하기
     }
   }
   
