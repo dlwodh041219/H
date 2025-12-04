@@ -2,6 +2,7 @@ let scene = 0;         // 0: 아바타 선택, 1: 사람 이모지 선택, 2: �
 let humanCenter;
 let animalCenter;
 let avatarRadius = 110;
+let humanComposedImg = null;
 
 // 사람 이모지 커스터마이징용 변수들
 let humanEmojiStep = 1;
@@ -12,11 +13,17 @@ let noseImg1, noseImg2, noseImg3, noseImg4;
 let mouthImg1, mouthImg2, mouthImg3, mouthImg4;
 let browImg1, browImg2, browImg3, browImg4;
 
+let hairImg1, hairImg2, hairImg3, hairImg4, hairImg5, hairImg6, hairImg7, hairImg8;
+let accImg1, accImg2, accImg3, accImg4;
+
 // 선택 상태 (0이면 아무것도 선택 안 됨)
 let selectedEyeNumber = 0;
 let selectedNoseNumber = 0;
 let selectedMouthNum = 0;
 let selectedBrowNum = 0;
+let selectedHairNum = 0;
+let selectedAccNum  = 0;
+let humanFaceRegion = { x: 0, y: 0, w: 0, h: 0 };
 
 // 버튼 정보
 let humanNextStepBtn = { x: 0, y: 0, w: 130, h: 40 };
@@ -41,6 +48,20 @@ let browBtn1 = { x: 0, y: 0, w: 35, h: 30 };
 let browBtn2 = { x: 0, y: 0, w: 35, h: 30 };
 let browBtn3 = { x: 0, y: 0, w: 35, h: 30 };
 let browBtn4 = { x: 0, y: 0, w: 35, h: 30 };
+
+let hairBtn1 = { x: 0, y: 0, w: 32, h: 29 };
+let hairBtn2 = { x: 0, y: 0, w: 33, h: 29 };
+let hairBtn3 = { x: 0, y: 0, w: 35, h: 35 };
+let hairBtn4 = { x: 0, y: 0, w: 35, h: 30 };
+let hairBtn5 = { x: 0, y: 0, w: 35, h: 30 };
+let hairBtn6 = { x: 0, y: 0, w: 35, h: 30 };
+let hairBtn7 = { x: 0, y: 0, w: 35, h: 30 };
+let hairBtn8 = { x: 0, y: 0, w: 35, h: 30 };
+
+let accBtn1  = { x: 0, y: 0, w: 33, h: 30 };
+let accBtn2  = { x: 0, y: 0, w: 33, h: 30 };
+let accBtn3  = { x: 0, y: 0, w: 35, h: 30 };
+let accBtn4  = { x: 0, y: 0, w: 31, h: 30 };
 
 let humanEmojiAssetsLoaded = false;
 
@@ -148,6 +169,20 @@ function loadHumanEmojiAssets() {
   browImg3 = loadImage('emojiImage/brow3.png');
   browImg4 = loadImage('emojiImage/brow4.png');
 
+  hairImg1 = loadImage('emojiImage/hair1.png');
+  hairImg2 = loadImage('emojiImage/hair2.png');
+  hairImg3 = loadImage('emojiImage/hair3.png');
+  hairImg4 = loadImage('emojiImage/hair4.png');
+  hairImg5 = loadImage('emojiImage/hair5.png');
+  hairImg6 = loadImage('emojiImage/hair6.png');
+  hairImg7 = loadImage('emojiImage/hair7.png');
+  hairImg8 = loadImage('emojiImage/hair8.png');
+
+  //accImg1 = loadImage('emojiImage/acc1.png');
+  //accImg2 = loadImage('emojiImage/acc2.png');
+  //accImg3 = loadImage('emojiImage/acc3.png');
+  //accImg4 = loadImage('emojiImage/acc4.png');
+
   humanEmojiAssetsLoaded = true;
 }
 
@@ -171,15 +206,15 @@ function drawHumanEmojiPage() {
   text(titleText, margin, margin); // 왼쪽 상단 제목
   pop();
 
-  // '다음 단계 >' 버튼 (1단계에서만 표시)
-  if (humanEmojiStep === 1) {
-    humanNextStepBtn.w = 130;
-    humanNextStepBtn.h = 38;
-    humanNextStepBtn.x = width - humanNextStepBtn.w - margin;
-    humanNextStepBtn.y = margin - humanNextStepBtn.h / 2;
+  humanNextStepBtn.w = 130;
+  humanNextStepBtn.h = 38;
+  humanNextStepBtn.x = width - humanNextStepBtn.w - margin;
+  humanNextStepBtn.y = margin - humanNextStepBtn.h / 2;
 
-    let ready = isHumanStep1Complete();      // 선택 다 했는지
-    let over = isMouseOver(humanNextStepBtn);
+  if (humanEmojiStep === 1) {
+    // 1단계: "다음 단계 >" (모든 부위 선택되어야 활성)
+    let ready = isHumanStep1Complete();
+    let over  = isMouseOver(humanNextStepBtn);
 
     push();
     rectMode(CORNER);
@@ -211,6 +246,34 @@ function drawHumanEmojiPage() {
       humanNextStepBtn.y + humanNextStepBtn.h / 2
     );
     pop();
+  }else if (humanEmojiStep === 2) {
+    // 2단계: "게임 시작 >" (항상 눌러도 됨)
+    let over = isMouseOver(humanNextStepBtn);
+
+    push();
+    rectMode(CORNER);
+    stroke(0);
+    strokeWeight(1.5);
+    fill(over ? color(255,230,160) : color(245,215,140));
+    rect(
+      humanNextStepBtn.x,
+      humanNextStepBtn.y,
+      humanNextStepBtn.w,
+      humanNextStepBtn.h,
+      10
+    );
+
+    fill(0);
+    noStroke();
+    textAlign(CENTER, CENTER);
+    textFont(fontTemplate);
+    textSize(16);
+    text(
+      "게임 시작 >",
+      humanNextStepBtn.x + humanNextStepBtn.w / 2,
+      humanNextStepBtn.y + humanNextStepBtn.h / 2
+    );
+    pop();
   }
 
   // 1단계 / 2단계 화면 분기
@@ -222,9 +285,14 @@ function drawHumanEmojiPage() {
 }
 
 function drawHumanEmojiStep1(margin) {
+  humanFaceRegion.x = margin;
+  humanFaceRegion.y = margin * 2;
+  humanFaceRegion.w = width / 2 - 2 * margin;
+  humanFaceRegion.h = height - margin * 3;
+
   push();
   fill(220);
-  rect(margin, margin * 2, width / 2 - 2 * margin, height - margin * 3);
+  rect(humanFaceRegion.x, humanFaceRegion.y, humanFaceRegion.w, humanFaceRegion.h);
   pop();
 
   // 얼굴 + 선택된 부위 그리기
@@ -375,28 +443,127 @@ function isHumanStep1Complete() {
 }
 
 function drawHumanEmojiStep2(margin) {
-  // 나중에 2단계 UI 넣으면 됨 (예: 이모지 저장, 이모지랑 같이 포즈 맞추기 등)
-  background(215, 240, 249);
+  humanFaceRegion.x = margin;
+  humanFaceRegion.y = margin * 2;
+  humanFaceRegion.w = width / 2 - 2 * margin;
+  humanFaceRegion.h = height - margin * 3;
 
   push();
-  textAlign(CENTER, CENTER);
-  textFont(fontTemplate);
-  textStyle(BOLD);
-  fill(0);
-  textSize(22);
-  text(
-    "이모지 커스텀 2단계 화면 (나중에 구현)",
-    width / 2,
-    height / 2
-  );
-  textStyle(NORMAL);
+  fill(220);
+  rect(humanFaceRegion.x, humanFaceRegion.y, humanFaceRegion.w, humanFaceRegion.h);
   pop();
+
+  push();
+  imageMode(CENTER);
+  let faceCenterX = width / 4;
+  let faceCenterY = height * 2 / 5;
+
+  if (humanComposedImg) {
+    let targetW = 210;
+    let ratio = humanComposedImg.height / humanComposedImg.width;
+    let targetH = targetW * ratio;
+    image(humanComposedImg, faceCenterX, faceCenterY, targetW, targetH);
+  } else {
+    // 혹시 캡쳐 안 된 경우 대비용 (디버깅용)
+    image(faceImg, faceCenterX, faceCenterY, 210, 170);
+  }
+
+  let hairWidth  = 200;
+  let hairHeight = 200;
+
+  // 헤어
+  if (selectedHairNum === 1)      image(hairImg1, faceCenterX, faceCenterY + 10, hairWidth, hairHeight);
+  else if (selectedHairNum === 2) image(hairImg2, faceCenterX, faceCenterY + 5 , hairWidth, hairHeight);
+  else if (selectedHairNum === 3) image(hairImg3, faceCenterX, faceCenterY, hairWidth, hairHeight);
+  else if (selectedHairNum === 4) image(hairImg4, faceCenterX, faceCenterY, hairWidth, hairHeight);
+  else if (selectedHairNum === 5) image(hairImg5, faceCenterX, faceCenterY + 3, hairWidth, hairHeight);
+  else if (selectedHairNum === 6) image(hairImg6, faceCenterX, faceCenterY, hairWidth, hairHeight);
+  else if (selectedHairNum === 7) image(hairImg7, faceCenterX, faceCenterY, hairWidth, hairHeight);
+  else if (selectedHairNum === 8) image(hairImg8, faceCenterX, faceCenterY, hairWidth, hairHeight);
+
+  // 악세사리
+  // if (selectedAccNum === 1)      image(accImg1, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
+  // else if (selectedAccNum === 2) image(accImg2, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
+  // else if (selectedAccNum === 3) image(accImg3, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
+  // else if (selectedAccNum === 4) image(accImg4, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
+
+  pop();
+
+  // 오른쪽 파트: 버튼 배치
+  textSize(15);
+  textAlign(LEFT, CENTER);
+  fill(0);
+  text('헤어', width / 2, margin + 20);
+  text('악세사리', width / 2, margin + 227);
+
+  let intervalY = (height - 2 * margin) / 4;
+  let intervalX = (width / 2) / 4;
+
+  // 기본 얼굴들 반복 출력 (배경 장식용)
+  for (let i = 0; i <= width - margin; i += intervalX) {
+    for (let j = 0; j <= height - margin; j += intervalY) {
+      image(faceImg, width / 2 + i, 2 * margin + j, 80, 60);
+    }
+  }
+
+  // --- 헤어 버튼 위치 ---
+  hairBtn1.x = width/2+23;
+  hairBtn1.y = 2*margin+15;
+
+  hairBtn2.x = width/2 + intervalX + 23;
+  hairBtn2.y = 2*margin+15;
+  
+  hairBtn3.x = width/2 + intervalX*2 + 23;
+  hairBtn3.y = 2*margin + 15;
+  
+  hairBtn4.x = width/2 + intervalX*3 + 23;
+  hairBtn4.y = 2*margin + 15;
+  
+  hairBtn5.x = width/2+23;
+  hairBtn5.y = 2*margin+ intervalY + 10;
+
+  hairBtn6.x = width/2 + intervalX + 23;
+  hairBtn6.y = 2*margin+intervalY + 10;
+  
+  hairBtn7.x = width/2 + intervalX*2 + 23;
+  hairBtn7.y = 2*margin +intervalY + 10;
+  
+  hairBtn8.x = width/2 + intervalX*3 + 23;
+  hairBtn8.y = 2*margin +intervalY + 10;
+
+  // --- 악세사리 버튼 ---
+  accBtn1.x = width/2+24;
+  accBtn1.y = 2*margin+ intervalY*2 + 15;
+
+  accBtn2.x = width/2 + intervalX + 23;
+  accBtn2.y = 2*margin+ intervalY*2 + 15;
+  
+  accBtn3.x = width/2 + intervalX*2 + 23;
+  accBtn3.y = 2*margin + intervalY*2 + 15;
+  
+  accBtn4.x = width/2 + intervalX*3 + 24;
+  accBtn4.y = 2*margin + intervalY*2 + 15;
+  
+  // 버튼 이미지 그리기
+  drawButton(hairImg1, hairBtn1, 2.8);
+  drawButton(hairImg2, hairBtn2, 2.8);
+  drawButton(hairImg3, hairBtn3, 2.8);
+  drawButton(hairImg4, hairBtn4, 2.8);
+  drawButton(hairImg5, hairBtn5, 2.8);
+  drawButton(hairImg6, hairBtn6, 2.8);
+  drawButton(hairImg7, hairBtn7, 2.8);
+  drawButton(hairImg8, hairBtn8, 2.8);
+
+  //drawButton(accImg1, accBtn1);
+  //drawButton(accImg2, accBtn2);
+  //drawButton(accImg3, accBtn3);
+  //drawButton(accImg4, accBtn4);
 }
 
 // 버튼 그리기 + 커지기
-function drawButton(img, btn) {
+function drawButton(img, btn, baseScale = 1) {
   let hover = isMouseOver(btn);
-  let scale = hover ? 1.3 : 1;
+  let scale = baseScale * (hover ? 1.3 : 1);
 
   let w = btn.w * scale;
   let h = btn.h * scale;
@@ -413,7 +580,6 @@ function isMouseOver(btn) {
 }
 
 // scene 2: 동물 이모지 선택 화면 (임시)
-
 function drawAnimalEmojiPage() {
   background(214, 240, 249);
 
@@ -528,14 +694,46 @@ function mousePressedHumanEmoji() {
     isMouseOver(humanNextStepBtn) &&
     isHumanStep1Complete()
   ) {
+    captureHumanEmoji();
     humanEmojiStep = 2;
   }
+  else if (humanEmojiStep === 2) {
+    // 헤어 버튼
+    if (isMouseOver(hairBtn1)) {
+      selectedHairNum = (selectedHairNum === 1) ? 0 : 1;
+    } else if (isMouseOver(hairBtn2)) {
+      selectedHairNum = (selectedHairNum === 2) ? 0 : 2;
+    } else if (isMouseOver(hairBtn3)) {
+      selectedHairNum = (selectedHairNum === 3) ? 0 : 3;
+    } else if (isMouseOver(hairBtn4)) {
+      selectedHairNum = (selectedHairNum === 4) ? 0 : 4;
+    } else if (isMouseOver(hairBtn5)) {
+      selectedHairNum = (selectedHairNum === 5) ? 0 : 5;
+    } else if (isMouseOver(hairBtn6)) {
+      selectedHairNum = (selectedHairNum === 6) ? 0 : 6;
+    } else if (isMouseOver(hairBtn7)) {
+      selectedHairNum = (selectedHairNum === 7) ? 0 : 7;
+    } else if (isMouseOver(hairBtn8)) {
+      selectedHairNum = (selectedHairNum === 8) ? 0 : 8;
+    }
 
-  // "게임 시작" 버튼 클릭 → stage3로 넘어가기
-  if (humanEmojiStep === 2 && isMouseOver(humanNextStepBtn)) {
+    // 악세사리 버튼(나중에 이미지 연결하면 같이 사용)
+    //if (isMouseOver(accBtn1)) {
+    //  selectedAccNum = (selectedAccNum === 1) ? 0 : 1;
+    //} else if (isMouseOver(accBtn2)) {
+    //  selectedAccNum = (selectedAccNum === 2) ? 0 : 2;
+    //} else if (isMouseOver(accBtn3)) {
+    //  selectedAccNum = (selectedAccNum === 3) ? 0 : 3;
+    //} else if (isMouseOver(accBtn4)) {
+    //  selectedAccNum = (selectedAccNum === 4) ? 0 : 4;
+    //}
+
+    // "게임 시작" 버튼 클릭 → stage3로 넘어가기
+    if (humanEmojiStep === 2 && isMouseOver(humanNextStepBtn)) {
     phase = 4;              // main_sketch.js의 전역 변수
     gameMode = "intro";
     gameIntroStartTime = millis();
+    }
   }
 }
 
@@ -546,4 +744,21 @@ function mousePressedAnimalEmoji() {
     gameMode = "intro";
     gameIntroStartTime = millis();
   }
+}
+
+function captureHumanEmoji() {
+  // 1단계에서 얼굴을 그리던 위치/크기 기준으로 캡쳐
+  let faceCenterX = width / 4;
+  let faceCenterY = height * 2 / 5 - 5;
+
+  // 얼굴 이미지(160x130)보다 조금 여유 있게 잡기
+  let captureW = 200;   // 가로
+  let captureH = 260;   // 세로 (땋은 머리까지 포함하고 싶으면 더 크게/작게 조절)
+
+  humanComposedImg = get(
+    faceCenterX - captureW / 2,
+    faceCenterY - captureH / 2,
+    captureW,
+    captureH
+  );
 }
