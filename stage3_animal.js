@@ -35,10 +35,13 @@ let animalSwingCount = 0;
 let animalSwingTimer = 0;
 let ANIMAL_SWING_MAX_FRAMES = 30;
 
+let animalDoneTime = null;
+let ANIMAL_DONE_DELAY = 1000; // 1초
+let animalGoToQRTriggered = false;
+
 
 // ================== 초기화 (메인에서 호출) ==================
 function initAnimalGame() {
-  // ❗ createCanvas는 main_sketch.js에서만!
 
   // 카메라
   animalVideo = createCapture(VIDEO);
@@ -74,6 +77,9 @@ function initAnimalGame() {
   animalSwingState = "WAIT_UP";
   animalSwingCount = 0;
   animalSwingTimer = 0;
+
+  animalDoneTime = null;
+  animalGoToQRTriggered = false;
 }
 
 // BodyPose 콜백
@@ -175,10 +181,19 @@ function drawAnimalGame() {
       animalSwingCount = 0;
       animalSwingTimer = 0;
     }
-
-    // if (animalCurrentStep > 4 && typeof goToQR === "function") {
-    //   goToQR();
-    // }
+  }
+  
+  // 1초 동안 "완료" 메시지만 보여주고 그 다음 QR로 이동
+  if (animalCurrentStep > 4 && !animalGoToQRTriggered) {
+    if (animalDoneTime === null) {
+      // 처음 완료된 순간 시간 저장
+      animalDoneTime = millis();
+    } else if (millis() - animalDoneTime >= ANIMAL_DONE_DELAY) {
+      animalGoToQRTriggered = true;
+      if (typeof goToQR === "function") {
+        goToQR();
+      }
+    }
   }
 }
 

@@ -269,19 +269,8 @@ function mousePressed(){
   if (isMouseOver(accBtn4)) {
      selectedAccNumber = 4;   // null 대신 2
   }
-  // glass
-  if (isMouseOver(glassBtn1)) {
-    selectedGlassNum = 1;   // null 대신 1
-  }
-  if (isMouseOver(glassBtn2)) {
-    selectedGlassNum = 2;   // null 대신 2
-  }
-  if (isMouseOver(glassBtn3)) {
-    selectedGlassNum = 3;   // null 대신 2
-  }
-  if (isMouseOver(glassBtn4)) {
-     selectedGlassNumber = 4;   // null 대신 2
-  }
+  
+
 }
 
 function mousePressed(){

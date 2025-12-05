@@ -1,6 +1,7 @@
 let fontStart;      
 let fontTemplate; 
 let img;
+// let qrImg;
 
 // phase: 1 = 시작 화면, 2 = 템플릿 선택, 3 = 이모지 커스텀, 4 = 각 게임 화면
 let phase = 1;
@@ -21,6 +22,7 @@ function preload() {
   fontStart    = loadFont("Recipekorea.ttf");
   fontTemplate = loadFont("komi.otf");
   img          = loadImage("pen.jpeg");
+  //qrImg        = loadImage("qr_sample.png");
 }
 
 function setup() {
@@ -69,9 +71,12 @@ function draw() {
 
     } else {
       drawGamePage();
+      }
     }
+  } else if (phase === 5) {
+    // ✅ QR 다운로드 페이지
+    drawQRPage();
   }
-}
 
   // 공통 커서
   push();
@@ -421,4 +426,99 @@ function mousePressed() {
       mousePressedAnimalEmoji();
     }
   }
+
+  if (phase === 5) {
+    let btnX = width / 2;
+    let btnY = height - 70;
+    let btnW = 220;
+    let btnH = 50;
+
+    let hovering =
+      mouseX > btnX - btnW / 2 &&
+      mouseX < btnX + btnW / 2 &&
+      mouseY > btnY - btnH / 2 &&
+      mouseY < btnY + btnH / 2;
+
+    if (hovering) {
+      resetAllState()
+    }
+  }
+}
+
+function resetAllState() {
+  // 1) 화면 단계 기본값
+  phase = 1;
+  selectedGame = null;
+  gameMode = "intro";
+
+  // 2) 각 게임 init 플래그
+  animalInited = false;
+  cookingInited = false;
+  houseInited = false;
+
+  // 3) 동물 키우기 자원 정리
+  if (typeof animalVideo !== "undefined" && animalVideo) {
+    animalVideo.stop();
+    animalVideo = null;
+  }
+  if (typeof animalHandsfree !== "undefined" && animalHandsfree && animalHandsfree.stop) {
+    animalHandsfree.stop();
+  }
+
+  // 4) 요리하기 자원 정리
+  if (typeof cookVideo !== "undefined" && cookVideo) {
+    cookVideo.stop();
+    cookVideo = null;
+  }
+  if (typeof cookBodyPose !== "undefined" && cookBodyPose && cookBodyPose.detectStop) {
+    cookBodyPose.detectStop();
+  }
+  if (typeof cookTracker !== "undefined" && cookTracker && cookTracker.stop) {
+    cookTracker.stop();
+  }
+
+  // 5) 집 짓기 자원 정리
+  if (typeof houseVideo !== "undefined" && houseVideo) {
+    houseVideo.stop();
+    houseVideo = null;
+  }
+  if (typeof houseBodyPose !== "undefined" && houseBodyPose && houseBodyPose.detectStop) {
+    houseBodyPose.detectStop();
+  }
+
+  // 6) 아바타 / 이모지 관련 전역 변수 리셋 (stage2_avatar.js에 있는 애들)
+  if (typeof scene !== "undefined") {
+    scene = 0;          // 다시 '아바타 선택 화면'부터
+  }
+  if (typeof humanEmojiStep !== "undefined") {
+    humanEmojiStep = 1; // 사람 이모지 커스터마이징 1단계부터
+  }
+  if (typeof humanComposedImg !== "undefined") {
+    humanComposedImg = null;  // 합성된 이모지 초기화
+  }
+
+  // 선택 상태들 0으로 리셋
+  if (typeof selectedEyeNumber !== "undefined")  selectedEyeNumber = 0;
+  if (typeof selectedNoseNumber !== "undefined") selectedNoseNumber = 0;
+  if (typeof selectedMouthNum !== "undefined")   selectedMouthNum = 0;
+  if (typeof selectedBrowNum !== "undefined")    selectedBrowNum = 0;
+
+  // 머리/악세사리 선택 변수들도 쓰고 있다면 같이 0으로
+  if (typeof selectedHairNum !== "undefined") selectedHairNum = 0;
+  if (typeof selectedAccNum  !== "undefined") selectedAccNum  = 0;
+}
+
+function goToQR() {
+  if (animalVideo) animalVideo.stop();
+  if (animalHandsfree) animalHandsfree.stop && animalHandsfree.stop();
+
+  if (cookVideo) cookVideo.stop();
+  if (cookBodyPose && cookBodyPose.detectStop) cookBodyPose.detectStop();
+  if (cookTracker && cookTracker.stop) cookTracker.stop();
+
+  if (houseVideo) houseVideo.stop();
+  if (houseBodyPose && houseBodyPose.detectStop) houseBodyPose.detectStop();
+
+  gameMode = "intro";  // 다시 게임으로 안 돌아가게
+  phase    = 5;        // QR 단계로 이동
 }

@@ -15,6 +15,7 @@ let browImg1, browImg2, browImg3, browImg4;
 
 let hairImg1, hairImg2, hairImg3, hairImg4, hairImg5, hairImg6, hairImg7, hairImg8;
 let accImg1, accImg2, accImg3, accImg4;
+let glassImg1, glassImg2, glassImg3, glassImg4;
 
 // 선택 상태 (0이면 아무것도 선택 안 됨)
 let selectedEyeNumber = 0;
@@ -23,6 +24,7 @@ let selectedMouthNum = 0;
 let selectedBrowNum = 0;
 let selectedHairNum = 0;
 let selectedAccNum  = 0;
+let selectedGlassNum = 0;
 let humanFaceRegion = { x: 0, y: 0, w: 0, h: 0 };
 
 // 버튼 정보
@@ -62,6 +64,10 @@ let accBtn1  = { x: 0, y: 0, w: 33, h: 30 };
 let accBtn2  = { x: 0, y: 0, w: 33, h: 30 };
 let accBtn3  = { x: 0, y: 0, w: 35, h: 30 };
 let accBtn4  = { x: 0, y: 0, w: 31, h: 30 };
+let glassBtn1 = { x: 0, y: 0, w: 33, h: 30 };
+let glassBtn2 = { x: 0, y: 0, w: 33, h: 30 };
+let glassBtn3 = { x: 0, y: 0, w: 35, h: 30 };
+let glassBtn4 = { x: 0, y: 0, w: 31, h: 30 };
 
 let humanEmojiAssetsLoaded = false;
 
@@ -178,11 +184,15 @@ function loadHumanEmojiAssets() {
   hairImg7 = loadImage('emojiImage/hair7.png');
   hairImg8 = loadImage('emojiImage/hair8.png');
 
-  //accImg1 = loadImage('emojiImage/acc1.png');
-  //accImg2 = loadImage('emojiImage/acc2.png');
-  //accImg3 = loadImage('emojiImage/acc3.png');
-  //accImg4 = loadImage('emojiImage/acc4.png');
-
+  accImg1 = loadImage('emojiImage/acc1.png');
+  accImg2 = loadImage('emojiImage/acc2.png');
+  accImg3 = loadImage('emojiImage/acc3.png');
+  accImg4 = loadImage('emojiImage/acc4.png');
+  glassImg1 = loadImage('emojiImage/acc5.png');
+  glassImg2 = loadImage('emojiImage/acc6.png');
+  glassImg3 = loadImage('emojiImage/acc7.png');
+  glassImg4 = loadImage('emojiImage/acc8.png');
+  
   humanEmojiAssetsLoaded = true;
 }
 
@@ -470,6 +480,7 @@ function drawHumanEmojiStep2(margin) {
 
   let hairWidth  = 200;
   let hairHeight = 200;
+  let hairOffsetY = -55; 
 
   // 헤어
   if (selectedHairNum === 1)      image(hairImg1, faceCenterX, faceCenterY + 10, hairWidth, hairHeight);
@@ -482,10 +493,21 @@ function drawHumanEmojiStep2(margin) {
   else if (selectedHairNum === 8) image(hairImg8, faceCenterX, faceCenterY, hairWidth, hairHeight);
 
   // 악세사리
-  // if (selectedAccNum === 1)      image(accImg1, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
-  // else if (selectedAccNum === 2) image(accImg2, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
-  // else if (selectedAccNum === 3) image(accImg3, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
-  // else if (selectedAccNum === 4) image(accImg4, faceCenterX, faceCenterY + hairOffsetY, hairWidth, hairHeight);
+  if (selectedAccNum === 1)      image(accImg1, faceCenterX, faceCenterY, 200, 200);
+  else if (selectedAccNum === 2) image(accImg2, faceCenterX, faceCenterY, 200, 200);
+  else if (selectedAccNum === 3) image(accImg3, faceCenterX, faceCenterY , 200, 200);
+  else if (selectedAccNum === 4) image(accImg4, faceCenterX, faceCenterY , 200, 200);
+
+  // glass
+  if (selectedGlassNum === 1) {
+    image(glassImg1,faceCenterX, faceCenterY+5, 200, 200)
+  } else if (selectedGlassNum ===2 ){
+    image(glassImg2, faceCenterX + 0.5, faceCenterY+5, 200, 200)
+  } else if (selectedGlassNum ===3){
+    image(glassImg3, faceCenterX, faceCenterY+5, 230, 235)
+  } else if (selectedGlassNum === 4 ){
+    image(glassImg4,faceCenterX, faceCenterY+5, 230, 235)
+  }
 
   pop();
 
@@ -544,6 +566,19 @@ function drawHumanEmojiStep2(margin) {
   accBtn4.x = width/2 + intervalX*3 + 24;
   accBtn4.y = 2*margin + intervalY*2 + 15;
   
+  // glass
+  glassBtn1.x = width/2+24;
+  glassBtn1.y = 2*margin+ intervalY*3 + 15;
+
+  glassBtn2.x = width/2 + intervalX + 23;
+  glassBtn2.y = 2*margin+ intervalY*3 + 15;
+  
+  glassBtn3.x = width/2 + intervalX*2 + 23;
+  glassBtn3.y = 2*margin + intervalY*3 + 15;
+  
+  glassBtn4.x = width/2 + intervalX*3 + 24;
+  glassBtn4.y = 2*margin + intervalY*3 + 15;
+
   // 버튼 이미지 그리기
   drawButton(hairImg1, hairBtn1, 2.8);
   drawButton(hairImg2, hairBtn2, 2.8);
@@ -554,10 +589,15 @@ function drawHumanEmojiStep2(margin) {
   drawButton(hairImg7, hairBtn7, 2.8);
   drawButton(hairImg8, hairBtn8, 2.8);
 
-  //drawButton(accImg1, accBtn1);
-  //drawButton(accImg2, accBtn2);
-  //drawButton(accImg3, accBtn3);
-  //drawButton(accImg4, accBtn4);
+  drawButton(accImg1, accBtn1, 2.8);
+  drawButton(accImg2, accBtn2, 2.8);
+  drawButton(accImg3, accBtn3, 2.8);
+  drawButton(accImg4, accBtn4, 2.8);
+
+  drawButton(glassImg1, glassBtn1, 2.8);
+  drawButton(glassImg2, glassBtn2, 2.8);
+  drawButton(glassImg3, glassBtn3, 2.8);
+  drawButton(glassImg4, glassBtn4, 2.8);
 }
 
 // 버튼 그리기 + 커지기
@@ -718,15 +758,26 @@ function mousePressedHumanEmoji() {
     }
 
     // 악세사리 버튼(나중에 이미지 연결하면 같이 사용)
-    //if (isMouseOver(accBtn1)) {
-    //  selectedAccNum = (selectedAccNum === 1) ? 0 : 1;
-    //} else if (isMouseOver(accBtn2)) {
-    //  selectedAccNum = (selectedAccNum === 2) ? 0 : 2;
-    //} else if (isMouseOver(accBtn3)) {
-    //  selectedAccNum = (selectedAccNum === 3) ? 0 : 3;
-    //} else if (isMouseOver(accBtn4)) {
-    //  selectedAccNum = (selectedAccNum === 4) ? 0 : 4;
-    //}
+    if (isMouseOver(accBtn1)) {
+      selectedAccNum = (selectedAccNum === 1) ? 0 : 1;
+    } else if (isMouseOver(accBtn2)) {
+      selectedAccNum = (selectedAccNum === 2) ? 0 : 2;
+    } else if (isMouseOver(accBtn3)) {
+      selectedAccNum = (selectedAccNum === 3) ? 0 : 3;
+    } else if (isMouseOver(accBtn4)) {
+      selectedAccNum = (selectedAccNum === 4) ? 0 : 4;
+    }
+    
+    // glass
+    if (isMouseOver(glassBtn1)) {
+      selectedGlassNum = (selectedGlassNum === 1) ? 0 : 1;
+    }else if (isMouseOver(glassBtn2)) {
+      selectedGlassNum = (selectedGlassNum === 2) ? 0 : 2;
+    }else if (isMouseOver(glassBtn3)) {
+      selectedGlassNum = (selectedGlassNum === 3) ? 0 : 3;
+    }else if (isMouseOver(glassBtn4)) {
+      selectedGlassNum = (selectedGlassNum === 4) ? 0 : 4;
+    }
 
     // "게임 시작" 버튼 클릭 → stage3로 넘어가기
     if (humanEmojiStep === 2 && isMouseOver(humanNextStepBtn)) {

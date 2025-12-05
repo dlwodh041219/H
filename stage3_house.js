@@ -40,6 +40,10 @@ let houseWaveCycles = 0;
 let houseWaveLeftStreak = 0;
 let houseWaveRightStreak = 0;
 
+let houseDoneTime = null;
+let HOUSE_DONE_DELAY = 1000; // 1초
+let houseGoToQRTriggered = false;
+
 // 초기화 (메인에서 phase=3 진입할 때 호출)
 function initHouseGame() {
   // 카메라
@@ -75,6 +79,9 @@ function initHouseGame() {
   houseSmoothPoints = {};
   houseHeadY = null;
   houseChestY = null;
+
+  houseDoneTime = null;
+  houseGoToQRTriggered = false;
 
   // BodyPose 로드 & 시작
   houseBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
@@ -153,10 +160,17 @@ function drawHouseGame() {
 
   drawHouseUI();
 
-  // 다 끝난 뒤 QR 페이지로 넘기고 싶으면:
-  // if (houseStepDone) {
-  //   goToQR();  // 메인 sketch.js에 이런 함수 만들어서 호출
-  // }
+  if (houseStepDone) {
+    if (houseDoneTime === null) {
+      // 처음으로 완료된 순간 시간 기록
+      houseDoneTime = millis();
+    } else if (!houseGoToQRTriggered && millis() - houseDoneTime >= HOUSE_DONE_DELAY) {
+      houseGoToQRTriggered = true;
+      if (typeof goToQR === "function") {
+        goToQR();
+      }
+    }
+  }
 }
 
 // 1단계: 도끼질

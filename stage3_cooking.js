@@ -52,6 +52,10 @@ let COOK_TASTE_OPEN_FRAMES = 3;
 let COOK_TASTE_CLOSE_FRAMES = 3;
 let COOK_TASTE_TARGET = 3;
 
+let cookDoneTime = null;
+let COOK_DONE_DELAY = 1000; // 1초
+let cookGoToQRTriggered = false;
+
 function initCookingGame() {
   // 카메라
   cookVideo = createCapture(VIDEO);
@@ -106,6 +110,9 @@ function cookResetState() {
   cookTasteCycles = 0;
   cookTasteOpenStreak = 0;
   cookTasteCloseStreak = 0;
+
+  cookDoneTime = null;
+  cookGoToQRTriggered = false;
 }
 
 // BodyPose 콜백
@@ -195,6 +202,16 @@ function drawCookingGame() {
   // 디버깅용 키포인트 표시
   if (cookCurrentPose && cookStage !== 3 && cookStage !== 4) {
     cookDrawKeypoints();
+  }
+
+   // 4단계 완료 후, 1초 동안 "요리 완료!" 화면 보여주고 QR로 이동
+  if (cookStage === 4 && cookStageDone && !cookGoToQRTriggered) {
+    if (cookDoneTime !== null && millis() - cookDoneTime >= COOK_DONE_DELAY) {
+      cookGoToQRTriggered = true;
+      if (typeof goToQR === "function") {
+        goToQR();
+      }
+    }
   }
 }
 
@@ -407,6 +424,11 @@ function cookUpdateTaste() {
     cookStageDone = true;
     cookDetectedText =
       "🎉요리 완료! 사랑하는 사람들과 음식을 나눠 보세요!🎉";
+    
+    cookDoneTime = millis();
+      if (typeof goToQR === "function") {
+      goToQR();
+    }
   }
 }
 
