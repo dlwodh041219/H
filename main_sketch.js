@@ -231,7 +231,7 @@ function drawTemplatePage() {
   fill(0);
   noStroke();
   textStyle(BOLD);
-  textSize(40);
+  textSize(30);
   text("어떤 게임을 플레이 할까요?", width / 2, 30);
   textStyle(NORMAL);
   pop();
@@ -287,6 +287,32 @@ function drawTemplatePage() {
     "나만의 집을 짓고 손님을 불러\n집들이를 해보아요!",
     hover3
   );
+
+  let backW = 80;
+  let backH = 34;
+  let backX = 40;  // 왼쪽 여백 20
+  let backY = 23;              // 상단 바 기준 높이
+
+  let hovering =
+    mouseX > backX - backW / 2 &&
+    mouseX < backX + backW / 2 &&
+    mouseY > backY - backH / 2 &&
+    mouseY < backY + backH / 2;
+
+  push();
+  rectMode(CENTER);
+  stroke(0);
+  strokeWeight(1.5);
+  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  rect(backX, backY, backW, backH, 10);
+
+  fill(0);
+  noStroke();
+  textFont(fontTemplate);
+  textAlign(CENTER, CENTER);
+  textSize(14);
+  text("< 이전", backX, backY);
+  pop();
 }
 
 // 카드 영역 체크
@@ -410,6 +436,22 @@ function mousePressed() {
     let x2 = width / 2;
     let x3 = width - 110;
 
+    let backW = 80;
+    let backH = 34;
+    let backX = 40;
+    let backY = 23;
+
+    let overBack =
+      mouseX > backX - backW / 2 &&
+      mouseX < backX + backW / 2 &&
+      mouseY > backY - backH / 2 &&
+      mouseY < backY + backH / 2;
+
+    if (overBack) {
+      phase = 1;
+    return;
+    }
+    
     if (isInsideCard(mouseX, mouseY, x1, yCenter, cardW, cardH)) {
       selectedGame = "animal";
       phase = 3;
@@ -530,6 +572,57 @@ function resetAllState() {
   // 머리/악세사리 선택 변수들도 쓰고 있다면 같이 0으로
   if (typeof selectedHairNum !== "undefined") selectedHairNum = 0;
   if (typeof selectedAccNum  !== "undefined") selectedAccNum  = 0;
+}
+
+function backToAvatarFromGame() {
+  // === 동물 게임 정리 ===
+  if (typeof animalBodyPose !== "undefined" && animalBodyPose && animalBodyPose.detectStop) {
+    animalBodyPose.detectStop();
+    animalBodyPose = null;
+  }
+  if (typeof animalVideo !== "undefined" && animalVideo) {
+    animalVideo.stop();
+    animalVideo.remove();
+    animalVideo = null;
+  }
+  if (typeof animalHandsfree !== "undefined" && animalHandsfree) {
+    animalHandsfree.stop();
+  }
+
+  // === 요리 게임 정리 ===
+  if (typeof cookBodyPose !== "undefined" && cookBodyPose && cookBodyPose.detectStop) {
+    cookBodyPose.detectStop();
+    cookBodyPose = null;
+  }
+  if (typeof cookVideo !== "undefined" && cookVideo) {
+    cookVideo.stop();
+    cookVideo.remove();
+    cookVideo = null;
+  }
+  if (typeof cookTracker !== "undefined" && cookTracker && cookTracker.stop) {
+    cookTracker.stop();
+    cookTracker = null;
+  }
+
+  // === 집 짓기 정리 ===
+  if (typeof houseBodyPose !== "undefined" && houseBodyPose && houseBodyPose.detectStop) {
+    houseBodyPose.detectStop();
+    houseBodyPose = null;
+  }
+  if (typeof houseVideo !== "undefined" && houseVideo) {
+    houseVideo.stop();
+    houseVideo.remove();
+    houseVideo = null;
+  }
+
+  // init 플래그 리셋 (다시 들어가면 처음부터)
+  animalInited  = false;
+  cookingInited = false;
+  houseInited   = false;
+
+  // 게임 모드는 intro로, 화면은 아바타/이모지(phase 3)로
+  gameMode = "intro";
+  phase    = 3;
 }
 
 function goToQR() {

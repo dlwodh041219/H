@@ -30,6 +30,7 @@ let humanFaceRegion = { x: 0, y: 0, w: 0, h: 0 };
 // 버튼 정보
 let humanNextStepBtn = { x: 0, y: 0, w: 130, h: 40 };
 let animalNextBtn = { x: 0, y: 0, w: 130, h: 40 };
+let humanBackBtn = { x: 0, y: 0, w: 0, h: 0 };
 
 let eyeBtn1 = { x: 0, y: 0, w: 35, h: 30 };
 let eyeBtn2 = { x: 0, y: 0, w: 35, h: 30 };
@@ -107,6 +108,32 @@ function drawAvatarSelect() {
 
   drawAvatarCircle(humanCenter.x,  humanCenter.y,  avatarRadius, "👤", "사람", overHuman);
   drawAvatarCircle(animalCenter.x, animalCenter.y, avatarRadius, "🐾", "동물", overAnimal);
+  
+  let backW = 80;
+  let backH = 34;
+  let backX = 40;
+  let backY = 23;
+
+  let hovering =
+    mouseX > backX - backW / 2 &&
+    mouseX < backX + backW / 2 &&
+    mouseY > backY - backH / 2 &&
+    mouseY < backY + backH / 2;
+
+  push();
+  rectMode(CENTER);
+  stroke(0);
+  strokeWeight(1.5);
+  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  rect(backX, backY, backW, backH, 8);
+
+  fill(0);
+  noStroke();
+  textFont(fontTemplate);
+  textAlign(CENTER, CENTER);
+  textSize(14);
+  text("< 이전", backX, backY);
+  pop();
 }
 
 function drawAvatarCircle(cx, cy, r, icon, label, hovered) {
@@ -202,6 +229,12 @@ function drawHumanEmojiPage() {
 
   let margin = 40;
 
+  // 🔹 공통 Back 버튼 위치 설정
+  humanBackBtn.w = 80;
+  humanBackBtn.h = 34;
+  humanBackBtn.x = margin;
+  humanBackBtn.y = margin - humanBackBtn.h / 2;
+
   // 상단 바: 제목 + '다음 단계 >' 버튼
   push();
   fill(0);
@@ -214,6 +247,23 @@ function drawHumanEmojiPage() {
   let titleText =
     humanEmojiStep === 1 ? "이모지 커스텀 1단계" : "이모지 커스텀 2단계";
   text(titleText, width / 2, margin);
+  pop();
+  
+  // 왼쪽 위 Back 버튼 그리기
+  let overBack = isMouseOver(humanBackBtn);
+  push();
+  rectMode(CORNER);
+  stroke(0);
+  strokeWeight(1.5);
+  fill(overBack ? color(250,210,120) : color(230,190,140));
+  rect(humanBackBtn.x, humanBackBtn.y, humanBackBtn.w, humanBackBtn.h, 10);
+
+  fill(0);
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textFont(fontTemplate);
+  textSize(14);
+  text("< 이전", humanBackBtn.x + humanBackBtn.w/2, humanBackBtn.y + humanBackBtn.h/2);
   pop();
 
   humanNextStepBtn.w = 130;
@@ -682,6 +732,24 @@ function drawAnimalEmojiPage() {
 
 function mousePressedAvatar() {
   if (scene === 0) {
+    // 🔹 먼저 BACK 버튼 처리 (phase 2로)
+    let backW = 80;
+    let backH = 34;
+    let backX = 40;
+    let backY = 23;
+
+    let overBack =
+      mouseX > backX - backW / 2 &&
+      mouseX < backX + backW / 2 &&
+      mouseY > backY - backH / 2 &&
+      mouseY < backY + backH / 2;
+
+    if (overBack) {
+      phase = 2; // 템플릿 선택 화면으로
+      return;
+    }
+
+    // 아바타 선택
     if (dist(mouseX, mouseY, humanCenter.x, humanCenter.y) < avatarRadius) {
       scene = 1; // 사람 이모지 선택 화면으로
     } else if (dist(mouseX, mouseY, animalCenter.x, animalCenter.y) < avatarRadius) {
@@ -693,6 +761,18 @@ function mousePressedAvatar() {
 }
 
 function mousePressedHumanEmoji() {
+  if (isMouseOver(humanBackBtn)) {
+    // 1단계에서는 아바타 선택 화면(scene 0)으로
+    if (humanEmojiStep === 1) {
+      scene = 0;
+    }
+    // 2단계에서는 1단계로 돌아가게 (선택값 유지)
+    else if (humanEmojiStep === 2) {
+      humanEmojiStep = 1;
+    }
+    return;
+  }
+
   // 눈 버튼
   if (isMouseOver(eyeBtn1)) {
     selectedEyeNumber = (selectedEyeNumber === 1) ? 0 : 1;

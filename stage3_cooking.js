@@ -54,6 +54,7 @@ let COOK_TASTE_TARGET = 3;
 
 let cookQRBtn = { x: 0, y: 0, w: 0, h: 0 };
 let cookSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
+let cookBackBtn = { x: 0, y: 0, w: 0, h: 0 };
 let cookGoToQRTriggered = false;
 
 let cookLastSkipTime = 0;          // ★ 추가
@@ -456,6 +457,17 @@ function cookDrawKeypoints() {
 }
 
 function mousePressedCookingGame() {
+  if (
+    mouseX > cookBackBtn.x &&
+    mouseX < cookBackBtn.x + cookBackBtn.w &&
+    mouseY > cookBackBtn.y &&
+    mouseY < cookBackBtn.y + cookBackBtn.h
+  ) {
+    console.log("[Cooking] BACK 버튼 클릭 → 아바타 화면으로");
+    backToAvatarFromGame();
+    return;
+  }
+
   if (!(cookStage === 4 && cookStageDone)) {
     // 쿨타임 체크
     if (millis() - cookLastSkipTime < COOK_SKIP_COOLDOWN) {
@@ -513,6 +525,7 @@ function cookForceNextStage() {
 
 // 화면 표시(UI)
 function cookDrawStageInfo() {
+  // 상단 바 배경
   fill(0, 180);
   noStroke();
   rect(0, 0, width, 60);
@@ -520,49 +533,75 @@ function cookDrawStageInfo() {
   fill(255);
   textSize(20);
   textAlign(CENTER, CENTER);
+  textFont(fontTemplate); // 폰트 통일 (원하면 빼도 됨)
 
-  // ✅ 4단계 완료 상태일 때: 완료 문구 + QR 저장 버튼
+  // ✅ 4단계 완료 상태일 때: 완료 문구 + 왼쪽 BACK, 오른쪽 QR(80x30)
   if (cookStage === 4 && cookStageDone) {
     let desc = `🎉요리하기 완료! 사랑하는 사람들과 음식을 나누세요!🎉`;
     text(desc, width / 2, 30);
 
-    // QR 버튼 위치
-    let btnW = 120;
-    let btnH = 36;
-    let btnCenterX = width - btnW / 2 - 20; // 오른쪽 여백
-    let btnCenterY = 30;
+    let btnW = 80;
+    let btnH = 30;
+    let centerY = 30;
+    let rightCenterX = width - btnW / 2 - 20; // QR
+    let leftCenterX  = btnW / 2 + 20;         // BACK
 
-    // 버튼 영역 저장 (mousePressedCookingGame에서 사용)
-    cookQRBtn.x = btnCenterX - btnW / 2;
-    cookQRBtn.y = btnCenterY - btnH / 2;
+    // 🔹 BACK 버튼 영역
+    cookBackBtn.x = leftCenterX - btnW / 2;
+    cookBackBtn.y = centerY - btnH / 2;
+    cookBackBtn.w = btnW;
+    cookBackBtn.h = btnH;
+
+    // 🔹 QR 버튼 영역
+    cookQRBtn.x = rightCenterX - btnW / 2;
+    cookQRBtn.y = centerY - btnH / 2;
     cookQRBtn.w = btnW;
     cookQRBtn.h = btnH;
 
-    // hover
-    let hovering =
+    // BACK hover
+    let backHover =
+      mouseX > cookBackBtn.x &&
+      mouseX < cookBackBtn.x + cookBackBtn.w &&
+      mouseY > cookBackBtn.y &&
+      mouseY < cookBackBtn.y + cookBackBtn.h;
+
+    // QR hover
+    let qrHover =
       mouseX > cookQRBtn.x &&
       mouseX < cookQRBtn.x + cookQRBtn.w &&
       mouseY > cookQRBtn.y &&
       mouseY < cookQRBtn.y + cookQRBtn.h;
 
-    // 버튼 그리기
+    // BACK 버튼
     push();
     rectMode(CORNER);
     noStroke();
-    fill(hovering ? color(230, 164, 174) : color(200, 150, 160));
+    fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
+    rect(cookBackBtn.x, cookBackBtn.y, btnW, btnH, 8);
+
+    fill(0);
+    textSize(14);
+    textAlign(CENTER, CENTER);
+    text("< 이전", leftCenterX, centerY);
+    pop();
+
+    // QR 버튼
+    push();
+    rectMode(CORNER);
+    noStroke();
+    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
     rect(cookQRBtn.x, cookQRBtn.y, btnW, btnH, 10);
 
     fill(0);
-    textSize(16);
+    textSize(14);
     textAlign(CENTER, CENTER);
-    text("QR 저장", btnCenterX, btnCenterY);
+    text("QR 저장 >", rightCenterX, centerY);
     pop();
 
-    return; // 완료 화면이면 여기서 UI 끝
+    return; // ✅ 완료 화면에서는 여기서 끝
   }
 
   // ✅ 진행 중 단계 텍스트
-  push();
   let desc = "";
   if (cookStage === 0) {
     desc = `1단계) 재료 칼질: 오른손을 위아래로 크게 3회 움직여요! (${cookChopCycles}/3)`;
@@ -571,40 +610,68 @@ function cookDrawStageInfo() {
   } else if (cookStage === 2) {
     desc = `3단계) 재료 볶기: 오른손을 좌우로 3회 크게 움직여요! (${cookFryCycles}/3)`;
   } else if (cookStage === 3) {
-    desc = `4단계) 간보기: 입을 3회 크게 벌렸다 오므리세요! (${cookTasteCycles}/3)`;
+    desc = `4단계) 간보기: 입을 3회 크게 벌렸다 오므리세요! (${cookTasteCycles}/${COOK_TASTE_TARGET})`;
   }
 
   noStroke();
   fill(255);
   text(desc, width / 2, 30);
-  pop();
 
-  // 오른쪽 위 SKIP 버튼
+  // 🔹 왼쪽 BACK, 오른쪽 SKIP (대칭, 80x30)
   let btnW = 80;
   let btnH = 30;
-  let btnX = width - btnW / 2 - 20;
-  let btnY = 30;
+  let centerY = 30;
 
-  cookSkipBtn.x = btnX - btnW / 2;
-  cookSkipBtn.y = btnY - btnH / 2;
+  let backCenterX = btnW / 2 + 20;
+  let skipCenterX = width - btnW / 2 - 20;
+
+  // BACK 버튼 영역
+  cookBackBtn.x = backCenterX - btnW / 2;
+  cookBackBtn.y = centerY - btnH / 2;
+  cookBackBtn.w = btnW;
+  cookBackBtn.h = btnH;
+
+  // SKIP 버튼 영역
+  cookSkipBtn.x = skipCenterX - btnW / 2;
+  cookSkipBtn.y = centerY - btnH / 2;
   cookSkipBtn.w = btnW;
   cookSkipBtn.h = btnH;
 
-  let hovering =
+  let backHover =
+    mouseX > cookBackBtn.x &&
+    mouseX < cookBackBtn.x + cookBackBtn.w &&
+    mouseY > cookBackBtn.y &&
+    mouseY < cookBackBtn.y + cookBackBtn.h;
+
+  let skipHover =
     mouseX > cookSkipBtn.x &&
     mouseX < cookSkipBtn.x + cookSkipBtn.w &&
     mouseY > cookSkipBtn.y &&
     mouseY < cookSkipBtn.y + cookSkipBtn.h;
 
+  // BACK 버튼
   push();
   rectMode(CORNER);
   noStroke();
-  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
+  rect(cookBackBtn.x, cookBackBtn.y, btnW, btnH, 8);
+
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("< 이전", backCenterX, centerY);
+  pop();
+
+  // SKIP 버튼
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(skipHover ? color(250, 210, 120) : color(230, 190, 140));
   rect(cookSkipBtn.x, cookSkipBtn.y, btnW, btnH, 8);
 
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP", btnX, btnY);
+  text("SKIP >", skipCenterX, centerY);
   pop();
 }

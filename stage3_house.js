@@ -42,6 +42,7 @@ let houseWaveRightStreak = 0;
 
 let houseQRBtn = { x: 0, y: 0, w: 0, h: 0 };
 let houseSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
+let houseBackBtn = { x: 0, y: 0, w: 0, h: 0 };
 let houseGoToQRTriggered = false;
 
 let houseLastSkipTime = 0;          // ★ 추가
@@ -364,6 +365,17 @@ function drawHouseKeypoints() {
 }
 
 function mousePressedHouseGame() {
+  if (
+    mouseX > houseBackBtn.x &&
+    mouseX < houseBackBtn.x + houseBackBtn.w &&
+    mouseY > houseBackBtn.y &&
+    mouseY < houseBackBtn.y + houseBackBtn.h
+  ) {
+    console.log("[House] BACK 버튼 클릭 → 아바타 화면으로");
+    backToAvatarFromGame();
+    return;
+  }
+
   if (!houseStepDone) {
     // 쿨타임 체크
     if (millis() - houseLastSkipTime < HOUSE_SKIP_COOLDOWN) {
@@ -423,38 +435,67 @@ function drawHouseUI() {
   fill(255);
   textSize(20);
   textAlign(CENTER, CENTER);
+  textFont(fontTemplate);
 
-  // ✅ 집 짓기 완료 상태라면: 완료 문구 + QR 저장 버튼
+  // ✅ 집 짓기 완료 상태라면: 완료 문구 + 왼쪽 BACK, 오른쪽 QR(80x30)
   if (houseStepDone) {
     let desc = "🎉 집 짓기 완료! 손님들과 즐거운 시간을 보내세요!🎉";
     text(desc, width / 2, 30);
 
-    let btnW = 120;
-    let btnH = 36;
-    let btnCenterX = width - btnW / 2 - 20;
-    let btnCenterY = 30;
+    let btnW = 80;
+    let btnH = 30;
+    let centerY = 30;
+    let rightCenterX = width - btnW / 2 - 20; // QR
+    let leftCenterX  = btnW / 2 + 20;         // BACK
 
-    houseQRBtn.x = btnCenterX - btnW / 2;
-    houseQRBtn.y = btnCenterY - btnH / 2;
+    // BACK 버튼 영역
+    houseBackBtn.x = leftCenterX - btnW / 2;
+    houseBackBtn.y = centerY - btnH / 2;
+    houseBackBtn.w = btnW;
+    houseBackBtn.h = btnH;
+
+    // QR 버튼 영역
+    houseQRBtn.x = rightCenterX - btnW / 2;
+    houseQRBtn.y = centerY - btnH / 2;
     houseQRBtn.w = btnW;
     houseQRBtn.h = btnH;
 
-    let hovering =
+    let backHover =
+      mouseX > houseBackBtn.x &&
+      mouseX < houseBackBtn.x + houseBackBtn.w &&
+      mouseY > houseBackBtn.y &&
+      mouseY < houseBackBtn.y + houseBackBtn.h;
+
+    let qrHover =
       mouseX > houseQRBtn.x &&
       mouseX < houseQRBtn.x + houseQRBtn.w &&
       mouseY > houseQRBtn.y &&
       mouseY < houseQRBtn.y + houseQRBtn.h;
 
+    // BACK 버튼
     push();
     rectMode(CORNER);
     noStroke();
-    fill(hovering ? color(230, 164, 174) : color(200, 150, 160));
+    fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
+    rect(houseBackBtn.x, houseBackBtn.y, btnW, btnH, 8);
+
+    fill(0);
+    textSize(14);
+    textAlign(CENTER, CENTER);
+    text("< 이전", leftCenterX, centerY);
+    pop();
+
+    // QR 버튼
+    push();
+    rectMode(CORNER);
+    noStroke();
+    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
     rect(houseQRBtn.x, houseQRBtn.y, btnW, btnH, 10);
 
     fill(0);
-    textSize(16);
+    textSize(14);
     textAlign(CENTER, CENTER);
-    text("QR 저장", btnCenterX, btnCenterY);
+    text("QR 저장 >", rightCenterX, centerY);
     pop();
 
     return;
@@ -473,32 +514,61 @@ function drawHouseUI() {
 
   text(desc, width / 2, 30);
   
-  // 🔹 오른쪽 위 SKIP 버튼
+  // 🔹 왼쪽 BACK, 오른쪽 SKIP (대칭)
   let btnW = 80;
   let btnH = 30;
-  let btnX = width - btnW / 2 - 20;
-  let btnY = 30;
+  let centerY = 30;
 
-  houseSkipBtn.x = btnX - btnW / 2;
-  houseSkipBtn.y = btnY - btnH / 2;
+  let backCenterX = btnW / 2 + 20;
+  let skipCenterX = width - btnW / 2 - 20;
+
+  // BACK 버튼 영역
+  houseBackBtn.x = backCenterX - btnW / 2;
+  houseBackBtn.y = centerY - btnH / 2;
+  houseBackBtn.w = btnW;
+  houseBackBtn.h = btnH;
+
+  // SKIP 버튼 영역
+  houseSkipBtn.x = skipCenterX - btnW / 2;
+  houseSkipBtn.y = centerY - btnH / 2;
   houseSkipBtn.w = btnW;
   houseSkipBtn.h = btnH;
 
-  let hovering =
+  let backHover =
+    mouseX > houseBackBtn.x &&
+    mouseX < houseBackBtn.x + houseBackBtn.w &&
+    mouseY > houseBackBtn.y &&
+    mouseY < houseBackBtn.y + houseBackBtn.h;
+
+  let skipHover =
     mouseX > houseSkipBtn.x &&
     mouseX < houseSkipBtn.x + houseSkipBtn.w &&
     mouseY > houseSkipBtn.y &&
     mouseY < houseSkipBtn.y + houseSkipBtn.h;
 
+  // BACK 버튼
   push();
   rectMode(CORNER);
   noStroke();
-  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
+  rect(houseBackBtn.x, houseBackBtn.y, btnW, btnH, 8);
+
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("< 이전", backCenterX, centerY);
+  pop();
+
+  // SKIP 버튼
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(skipHover ? color(250, 210, 120) : color(230, 190, 140));
   rect(houseSkipBtn.x, houseSkipBtn.y, btnW, btnH, 8);
 
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP", btnX, btnY);
+  text("SKIP >", skipCenterX, centerY);
   pop();
 }

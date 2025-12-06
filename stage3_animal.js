@@ -37,6 +37,7 @@ let ANIMAL_SWING_MAX_FRAMES = 30;
 
 let animalQRBtn = { x: 0, y: 0, w: 0, h: 0 };
 let animalSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
+let animalBackBtn = { x: 0, y: 0, w: 0, h: 0 };
 let animalGoToQRTriggered = false;
 
 let animalLastSkipTime = 0;         
@@ -390,6 +391,17 @@ function animalDrawKeypoints() {
 }
 
 function mousePressedAnimalGame() {
+  if (
+    mouseX > animalBackBtn.x &&
+    mouseX < animalBackBtn.x + animalBackBtn.w &&
+    mouseY > animalBackBtn.y &&
+    mouseY < animalBackBtn.y + animalBackBtn.h
+  ) {
+    console.log("[Animal] BACK 버튼 클릭 → 아바타 화면으로");
+    backToAvatarFromGame();
+    return;
+  }
+
   if (animalCurrentStep <= 4) {
     // 🔹 SKIP 쿨타임 체크
     if (millis() - animalLastSkipTime < ANIMAL_SKIP_COOLDOWN) {
@@ -453,25 +465,50 @@ function animalDrawUI() {
   textSize(20);
   textAlign(CENTER, CENTER);
 
-  // ✅ 완료 상태일 때는: 문구 + QR버튼 그리고 return
+  // ✅ 완료 상태일 때
   if (animalCurrentStep > 4) {
     let desc = "🎉 동물 키우기 완료! 행복한 시간을 보내세요!🎉";
     text(desc, width / 2, 30);
 
-    // QR 저장 버튼 (우측 상단)
-    let btnW = 120;
-    let btnH = 36;
-    let btnX = width - btnW / 2 - 20;  // 오른쪽 여백 20
-    let btnY = 30;                     // 상단 바 가운데 높이
+    let btnW = 80;
+    let btnH = 30;
+    let rightCenterX = width - btnW / 2 - 20; // QR
+    let centerY      = 30;
+    let leftCenterX  = btnW / 2 + 20;         // BACK
 
-    // 전역 버튼 영역 갱신
-    animalQRBtn.x = btnX - btnW / 2;
-    animalQRBtn.y = btnY - btnH / 2;
+    // QR 버튼 영역 저장
+    animalQRBtn.x = rightCenterX - btnW / 2;
+    animalQRBtn.y = centerY - btnH / 2;
     animalQRBtn.w = btnW;
     animalQRBtn.h = btnH;
 
-    // hover 효과 (마우스 위치로)
-    let hovering =
+    // BACK 버튼 영역 저장
+    animalBackBtn.x = leftCenterX - btnW / 2;
+    animalBackBtn.y = centerY - btnH / 2;
+    animalBackBtn.w = btnW;
+    animalBackBtn.h = btnH;
+
+    // BACK 버튼
+    let backHover =
+      mouseX > animalBackBtn.x &&
+      mouseX < animalBackBtn.x + animalBackBtn.w &&
+      mouseY > animalBackBtn.y &&
+      mouseY < animalBackBtn.y + animalBackBtn.h;
+
+    push();
+    rectMode(CORNER);
+    noStroke();
+    fill(backHover ? color(250,210,120) : color(230,190,140));
+    rect(animalBackBtn.x, animalBackBtn.y, btnW, btnH, 8);
+
+    fill(0);
+    textSize(14);
+    textAlign(CENTER, CENTER);
+    text("< 이전", leftCenterX, centerY);
+    pop();
+
+    // QR 버튼
+    let qrHover =
       mouseX > animalQRBtn.x &&
       mouseX < animalQRBtn.x + animalQRBtn.w &&
       mouseY > animalQRBtn.y &&
@@ -480,19 +517,19 @@ function animalDrawUI() {
     push();
     rectMode(CORNER);
     noStroke();
-    fill(hovering ? color(230, 164, 174) : color(200, 150, 160));
+    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
     rect(animalQRBtn.x, animalQRBtn.y, btnW, btnH, 10);
 
     fill(0);
-    textSize(16);
+    textSize(14);
     textAlign(CENTER, CENTER);
-    text("QR 저장", btnX, btnY);
+    text("QR 저장 >", rightCenterX, centerY);
     pop();
 
-    return; // ✅ 아래 일반 단계 UI는 그리지 않고 종료
+    return;
   }
 
-  // ✅ 여기 아래는 진행 중 단계(1~4)일 때만
+  // ✅ 진행 중 단계(1~4)
   let desc = "";
   if (animalCurrentStep === 1)
     desc = "1단계) 안아주기: 양팔을 크게 3초 간 벌리세요!";
@@ -505,33 +542,60 @@ function animalDrawUI() {
 
   text(desc, width / 2, 30);
 
-
   // 오른쪽 위 SKIP 버튼
   let btnW = 80;
   let btnH = 30;
-  let btnX = width - btnW / 2 - 20;
-  let btnY = 30;
+  let skipCenterX = width - btnW / 2 - 20;
+  let centerY = 30;
 
-  animalSkipBtn.x = btnX - btnW / 2;
-  animalSkipBtn.y = btnY - btnH / 2;
+  animalSkipBtn.x = skipCenterX - btnW / 2;
+  animalSkipBtn.y = centerY - btnH / 2;
   animalSkipBtn.w = btnW;
   animalSkipBtn.h = btnH;
 
-  let hovering =
+  // 왼쪽 BACK 버튼
+  let backCenterX = btnW / 2 + 20;
+
+  animalBackBtn.x = backCenterX - btnW / 2;
+  animalBackBtn.y = centerY - btnH / 2;
+  animalBackBtn.w = btnW;
+  animalBackBtn.h = btnH;
+
+  let hoveringSkip =
     mouseX > animalSkipBtn.x &&
     mouseX < animalSkipBtn.x + animalSkipBtn.w &&
     mouseY > animalSkipBtn.y &&
     mouseY < animalSkipBtn.y + animalSkipBtn.h;
 
+  let hoveringBack =
+    mouseX > animalBackBtn.x &&
+    mouseX < animalBackBtn.x + animalBackBtn.w &&
+    mouseY > animalBackBtn.y &&
+    mouseY < animalBackBtn.y + animalBackBtn.h;
+
+  // BACK
   push();
   rectMode(CORNER);
   noStroke();
-  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  fill(hoveringBack ? color(250,210,120) : color(230,190,140));
+  rect(animalBackBtn.x, animalBackBtn.y, btnW, btnH, 8);
+
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("< 이전", backCenterX, centerY);
+  pop();
+
+  // SKIP
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(hoveringSkip ? color(250, 210, 120) : color(230, 190, 140));
   rect(animalSkipBtn.x, animalSkipBtn.y, btnW, btnH, 8);
 
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP", btnX, btnY);
+  text("SKIP", skipCenterX, centerY);
   pop();
 }
