@@ -36,7 +36,7 @@ let animalSwingTimer = 0;
 let ANIMAL_SWING_MAX_FRAMES = 30;
 
 let animalQRBtn = { x: 0, y: 0, w: 0, h: 0 };
-let amimalGoToQRTriggered = false;
+let animalGoToQRTriggered = false;
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -54,7 +54,9 @@ function initAnimalGame() {
   });
 
   // Handsfree
-  animalHandsfree = new Handsfree({ hands: true, maxNumHands: 2 });
+  if (!animalHandsfree) {
+    animalHandsfree = new Handsfree({ hands: true, maxNumHands: 2 });
+  }
   animalHandsfree.start();
 
   console.log("ml5 version:", ml5.version);

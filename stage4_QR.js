@@ -8,10 +8,10 @@ function drawQRPage() {
   fill(0);
   noStroke();
   textSize(32);
-  text("나만의 이모지 완성!", width / 2, 60);
+  text("나만의 이모지 완성!", width / 2, 40);
 
   textSize(18);
-  text("아래 QR을 스캔해서\n영상·이미지를 다운받아 보세요 :)", width / 2, 110);
+  text("아래 QR을 스캔해서\n영상·이미지를 다운받아 보세요 :)", width / 2, 90);
   pop();
 
   // 가운데 카드

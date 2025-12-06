@@ -2,6 +2,7 @@ let fontStart;
 let fontTemplate; 
 let img;
 // let qrImg;
+let qrEnterTime = 0;
 
 // phase: 1 = 시작 화면, 2 = 템플릿 선택, 3 = 이모지 커스텀, 4 = 각 게임 화면
 let phase = 1;
@@ -231,7 +232,7 @@ function drawTemplatePage() {
   noStroke();
   textStyle(BOLD);
   textSize(40);
-  text("어떤 게임을 플레이 할까요?", width / 2, 35);
+  text("어떤 게임을 플레이 할까요?", width / 2, 30);
   textStyle(NORMAL);
   pop();
 
@@ -393,6 +394,7 @@ function drawGamePage() {
 }
 
 function mousePressed() {
+  
   // 1단계: START 화면 → 템플릿 화면으로 이동
   if (phase === 1) {
     if (mouseX < 495 && mouseX > 145 && mouseY < 410 && mouseY > 290) {
@@ -440,6 +442,10 @@ function mousePressed() {
     else if (selectedGame === "cooking") mousePressedCookingGame();
     else if (selectedGame === "house")   mousePressedHouseGame();
   } else if (phase === 5) {
+    // ✅ QR 화면 들어온 지 3000ms 이내의 클릭은 무시 (디바운스)
+    if (millis() - qrEnterTime < 3000) {
+      return;
+    }
     // 🔹 QR 화면에서의 "처음으로" 버튼
     let btnX = width / 2;
     let btnY = height - 70;
@@ -470,8 +476,13 @@ function resetAllState() {
   houseInited = false;
 
   // 3) 동물 키우기 자원 정리
+  if (typeof animalBodyPose !== "undefined" && animalBodyPose && animalBodyPose.detectStop) {
+    animalBodyPose.detectStop();
+    animalBodyPose = null;
+  }
   if (typeof animalVideo !== "undefined" && animalVideo) {
     animalVideo.stop();
+    animalVideo.remove();
     animalVideo = null;
   }
   if (typeof animalHandsfree !== "undefined" && animalHandsfree && animalHandsfree.stop) {
@@ -522,15 +533,51 @@ function resetAllState() {
 }
 
 function goToQR() {
-  if (animalVideo) animalVideo.stop();
-  if (animalHandsfree) animalHandsfree.stop && animalHandsfree.stop();
+  // === 동물 게임 정리 ===
+  if (typeof animalBodyPose !== "undefined" && animalBodyPose && animalBodyPose.detectStop) {
+    animalBodyPose.detectStop();
+    animalBodyPose = null;
+  }
+  if (typeof animalVideo !== "undefined" && animalVideo) {
+    animalVideo.stop();
+    animalVideo.remove();   // ❗ 실제 DOM에서 제거
+    animalVideo = null;
+  }
+  if (typeof animalHandsfree !== "undefined" && animalHandsfree) {
+    // 한 번만 만들고 재사용할 거면 여기서는 stop만 해도 OK
+    animalHandsfree.stop();
+    // 필요하면 아래 줄도 가능 (완전 삭제)
+    // animalHandsfree = null;
+  }
 
-  if (cookVideo) cookVideo.stop();
-  if (cookBodyPose && cookBodyPose.detectStop) cookBodyPose.detectStop();
-  if (cookTracker && cookTracker.stop) cookTracker.stop();
+  // === 요리 게임 정리 ===
+  if (typeof cookBodyPose !== "undefined" && cookBodyPose && cookBodyPose.detectStop) {
+    cookBodyPose.detectStop();
+    cookBodyPose = null;
+  }
+  if (typeof cookVideo !== "undefined" && cookVideo) {
+    cookVideo.stop();
+    cookVideo.remove();   // ❗
+    cookVideo = null;
+  }
+  if (typeof cookTracker !== "undefined" && cookTracker && cookTracker.stop) {
+    cookTracker.stop();
+    cookTracker = null;
+  }
 
-  if (houseVideo) houseVideo.stop();
-  if (houseBodyPose && houseBodyPose.detectStop) houseBodyPose.detectStop();
+  // === 집 짓기 정리 ===
+  if (typeof houseBodyPose !== "undefined" && houseBodyPose && houseBodyPose.detectStop) {
+    houseBodyPose.detectStop();
+    houseBodyPose = null;
+  }
+  if (typeof houseVideo !== "undefined" && houseVideo) {
+    houseVideo.stop();
+    houseVideo.remove();   // ❗
+    houseVideo = null;
+  }
+
+  // QR 화면 진입 시간 기록 (디바운스)
+  qrEnterTime = millis();
 
   gameMode = "intro";  // 다시 게임으로 안 돌아가게
   phase    = 5;        // QR 단계로 이동
