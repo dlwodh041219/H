@@ -465,11 +465,11 @@ function drawHouseUI() {
   if (houseStep === 1)
     desc = "1단계) 도끼질: 양손 깍지를 끼고, 머리 위에서 아래로 크게 내리세요!";
   else if (houseStep === 2)
-    desc = `2단계) 톱질: 옆으로 서서 양손 깍지를 끼고, 앞뒤로 크게 왕복하세요! (${houseSawCycles}/3)`;
+    desc = `2단계) 톱질: 옆으로 서서 양손 깍지를 끼고, 앞뒤로 움직여요! (${houseSawCycles}/3)`;
   else if (houseStep === 3)
-    desc = `3단계) 망치질: 오른손을 위아래로 왕복하세요! (${houseHammerCycles}/5)`;
+    desc = `3단계) 망치질: 오른손을 위아래로 5회 왕복해서 움직여요! (${houseHammerCycles}/5)`;
   else if (houseStep === 4)
-    desc = `4단계) 집들이 인사: 오른손을 좌우로 흔들어 보세요! (${houseWaveCycles}/3)`;
+    desc = `4단계) 집들이 인사: 오른손을 좌우로 3회 흔들어요! (${houseWaveCycles}/3)`;
 
   text(desc, width / 2, 30);
   

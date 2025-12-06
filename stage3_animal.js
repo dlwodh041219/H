@@ -21,7 +21,7 @@ let animalHoldStartTime = null;
 let ANIMAL_HOLD_DURATION = 3000; // 3초
 
 // 2단계: 밥주기(Handsfree)
-let animalFood = { x: 500, y: 100, r: 50, visible: true };
+let animalFood = { x: 500, y: 130, r: 50, visible: true };
 let animalBowl = { x: 320, y: 400, r: 60, visible: true };
 
 // 3단계: 쓰다듬기
@@ -383,7 +383,7 @@ function animalDrawKeypoints() {
 
   if (animalHeadY) {
     stroke(255, 0, 0);
-    strokeWeight(2);
+    strokeWeight(1);
     line(0, animalHeadY, width, animalHeadY);
     noStroke();
   }
@@ -495,13 +495,13 @@ function animalDrawUI() {
   // ✅ 여기 아래는 진행 중 단계(1~4)일 때만
   let desc = "";
   if (animalCurrentStep === 1)
-    desc = "1단계) 안아주기: 양팔을 크게 벌리세요!";
+    desc = "1단계) 안아주기: 양팔을 크게 3초 간 벌리세요!";
   else if (animalCurrentStep === 2)
-    desc = "2단계) 밥 주기: 손으로 당근과 그릇을 차례대로 터치!";
+    desc = "2단계) 밥 주기: 손으로 당근과 그릇을 차례로 터치하세요!";
   else if (animalCurrentStep === 3)
-    desc = `3단계) 쓰다듬기: 머리 위로 손 왕복! ${animalWaveCount}/${ANIMAL_REQUIRED_WAVES}`;
+    desc = `3단계) 쓰다듬기: 오른손을 머리 위아래로 3회 움직이세요! (${animalWaveCount}/${ANIMAL_REQUIRED_WAVES})`;
   else if (animalCurrentStep === 4)
-    desc = `4단계) 놀아주기: 양팔을 위아래로 왕복! ${animalSwingCount}/3`;
+    desc = `4단계) 놀아주기: 양팔을 위아래로 3회 움직이세요! (${animalSwingCount}/3)`;
 
   text(desc, width / 2, 30);
 

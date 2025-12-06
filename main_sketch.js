@@ -45,7 +45,7 @@ function draw() {
       drawGamePage(); 
 
       // 자동으로 n초 뒤에 실제 게임으로 전환
-      if (millis() - gameIntroStartTime > 1500) {
+      if (millis() - gameIntroStartTime > 2500) {
         gameMode = "play";
       }
     } else if (gameMode === "play") {

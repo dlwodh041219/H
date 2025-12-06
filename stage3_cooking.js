@@ -57,7 +57,7 @@ let cookSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
 let cookGoToQRTriggered = false;
 
 let cookLastSkipTime = 0;          // ★ 추가
-const COOK_SKIP_COOLDOWN = 800;    // ms
+let COOK_SKIP_COOLDOWN = 800;    // ms
 
 function initCookingGame() {
   // 카메라
@@ -565,13 +565,13 @@ function cookDrawStageInfo() {
   push();
   let desc = "";
   if (cookStage === 0) {
-    desc = `1단계) 재료 손질: 오른손을 머리 위에서 아래로 크게 3회 내리세요! (${cookChopCycles}/3)`;
+    desc = `1단계) 재료 칼질: 오른손을 위아래로 크게 3회 움직여요! (${cookChopCycles}/3)`;
   } else if (cookStage === 1) {
-    desc = `2단계) 재료 넣기: 양손을 머리 위에서 아래로 크게 3회 내리세요! (${cookBothCycles}/3)`;
+    desc = `2단계) 재료 넣기: 양손을 머리 위아래로 크게 3회 움직여요! (${cookBothCycles}/3)`;
   } else if (cookStage === 2) {
-    desc = `3단계) 재료 볶기: 오른손을 왼쪽↔오른쪽으로 크게 3회 움직여요! (${cookFryCycles}/3)`;
+    desc = `3단계) 재료 볶기: 오른손을 좌우로 3회 크게 움직여요! (${cookFryCycles}/3)`;
   } else if (cookStage === 3) {
-    desc = `4단계) 간보기: 입을 크게 벌렸다 닫는 동작을 3회 하세요! (${cookTasteCycles}/3)`;
+    desc = `4단계) 간보기: 입을 3회 크게 벌렸다 오므리세요! (${cookTasteCycles}/3)`;
   }
 
   noStroke();

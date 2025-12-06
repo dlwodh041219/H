@@ -208,12 +208,12 @@ function drawHumanEmojiPage() {
   noStroke();
   textFont(fontTemplate);
   textStyle(BOLD);
-  textAlign(LEFT, CENTER);
+  textAlign(CENTER, CENTER);
   textSize(24);
 
   let titleText =
     humanEmojiStep === 1 ? "이모지 커스텀 1단계" : "이모지 커스텀 2단계";
-  text(titleText, margin, margin); // 왼쪽 상단 제목
+  text(titleText, width / 2, margin);
   pop();
 
   humanNextStepBtn.w = 130;
@@ -353,18 +353,18 @@ function drawHumanEmojiStep1(margin) {
   pop()
 
   push();
+  let intervalX = (width/2) / 4;
+  let intervalY = (height - 2*margin) / 4;
+
   // 오른쪽 파트
   textFont(fontTemplate)
   textSize(15);
   fill(0);
-  text('눈썹', width/2, margin + 30)
-  text('눈',width/2, margin + 130)
-  text('코',width/2, margin + 230)
-  text('입',width/2, margin + 330)
+  text('눈썹', width/2 - 18, margin + intervalY - 22)
+  text('눈',width/2 - 18, margin + intervalY - 22 + 100)
+  text('코',width/2 - 18, margin + intervalY - 22 + 200)
+  text('입',width/2 - 18, margin + intervalY - 22 + 300)
   pop();
-
-  let intervalY = (height - 2*margin) / 4;
-  let intervalX = (width/2) / 4;
 
   // 기본 얼굴들 반복 출력
   for (let i = 0; i <= width - margin; i += intervalX) {
@@ -517,16 +517,17 @@ function drawHumanEmojiStep2(margin) {
 
   // 오른쪽 파트: 버튼 배치
   push();
-  textFont(fontTemplate)
-  textSize(15);
-  textAlign(LEFT, CENTER);
-  fill(0);
-  text('헤어', width / 2, margin + 20);
-  text('악세사리', width / 2, margin + 227);
-  pop();
-
   let intervalY = (height - 2 * margin) / 4;
   let intervalX = (width / 2) / 4;
+
+  textFont(fontTemplate)
+  textSize(15);
+  textAlign(CENTER, CENTER);
+  fill(0);
+  text('헤어', width/2 - 18, margin + intervalY - 26);
+  text('소품', width/2 - 18, margin + intervalY - 26 + 200);
+  text('안경',width/2 - 18, margin + intervalY - 26 + 300);
+  pop();
 
   // 기본 얼굴들 반복 출력 (배경 장식용)
   for (let i = 0; i <= width - margin; i += intervalX) {
