@@ -36,8 +36,11 @@ let animalSwingTimer = 0;
 let ANIMAL_SWING_MAX_FRAMES = 30;
 
 let animalQRBtn = { x: 0, y: 0, w: 0, h: 0 };
+let animalSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
 let animalGoToQRTriggered = false;
 
+let animalLastSkipTime = 0;         
+let ANIMAL_SKIP_COOLDOWN = 800;
 
 // ================== 초기화 (메인에서 호출) ==================
 function initAnimalGame() {
@@ -387,9 +390,26 @@ function animalDrawKeypoints() {
 }
 
 function mousePressedAnimalGame() {
-  // 아직 완료 상태가 아니면 클릭 무시
-  if (animalCurrentStep <= 4) return;
+  if (animalCurrentStep <= 4) {
+    // 🔹 SKIP 쿨타임 체크
+    if (millis() - animalLastSkipTime < ANIMAL_SKIP_COOLDOWN) {
+      console.log("[Animal] SKIP 쿨타임 중, 무시");
+      return;
+    }
+    
+    if (
+      mouseX > animalSkipBtn.x &&
+      mouseX < animalSkipBtn.x + animalSkipBtn.w &&
+      mouseY > animalSkipBtn.y &&
+      mouseY < animalSkipBtn.y + animalSkipBtn.h
+    ) {
+      console.log("[Animal] SKIP 버튼 클릭 → 다음 단계로");
+      animalForceNextStep();
+    }
+    return;
+  }
 
+  // 완료 상태일 때는 QR 버튼
   if (
     mouseX > animalQRBtn.x &&
     mouseX < animalQRBtn.x + animalQRBtn.w &&
@@ -402,6 +422,26 @@ function mousePressedAnimalGame() {
       goToQR();
     }
   }
+}
+
+function animalForceNextStep() {
+  // 현재 단계에 따라 약간 정리
+  if (animalCurrentStep === 2) {
+    // 밥주기 건너뛰면 당근/그릇 다 치우기
+    animalFood.visible = false;
+    animalBowl.visible = false;
+  }
+
+  if (animalCurrentStep < 4) {
+    animalCurrentStep++;
+    animalStepDone = false;  // 새 단계 시작
+  } else if (animalCurrentStep === 4) {
+    // 4단계를 스킵하면 곧바로 완료 상태로
+    animalCurrentStep = 5;
+    animalStepDone = false;
+  }
+
+  console.log("[Animal] 강제 진행 후 단계:", animalCurrentStep);
 }
 
 // ================== UI ==================
@@ -464,4 +504,34 @@ function animalDrawUI() {
     desc = `4단계) 놀아주기: 양팔을 위아래로 왕복! ${animalSwingCount}/3`;
 
   text(desc, width / 2, 30);
+
+
+  // 오른쪽 위 SKIP 버튼
+  let btnW = 80;
+  let btnH = 30;
+  let btnX = width - btnW / 2 - 20;
+  let btnY = 30;
+
+  animalSkipBtn.x = btnX - btnW / 2;
+  animalSkipBtn.y = btnY - btnH / 2;
+  animalSkipBtn.w = btnW;
+  animalSkipBtn.h = btnH;
+
+  let hovering =
+    mouseX > animalSkipBtn.x &&
+    mouseX < animalSkipBtn.x + animalSkipBtn.w &&
+    mouseY > animalSkipBtn.y &&
+    mouseY < animalSkipBtn.y + animalSkipBtn.h;
+
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  rect(animalSkipBtn.x, animalSkipBtn.y, btnW, btnH, 8);
+
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("SKIP", btnX, btnY);
+  pop();
 }

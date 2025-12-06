@@ -41,7 +41,11 @@ let houseWaveLeftStreak = 0;
 let houseWaveRightStreak = 0;
 
 let houseQRBtn = { x: 0, y: 0, w: 0, h: 0 };
+let houseSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
 let houseGoToQRTriggered = false;
+
+let houseLastSkipTime = 0;          // ★ 추가
+let HOUSE_SKIP_COOLDOWN = 800;
 
 // 초기화 (메인에서 phase=3 진입할 때 호출)
 function initHouseGame() {
@@ -360,8 +364,26 @@ function drawHouseKeypoints() {
 }
 
 function mousePressedHouseGame() {
-  if (!houseStepDone) return;  // 아직 완료 아니면 무시
+  if (!houseStepDone) {
+    // 쿨타임 체크
+    if (millis() - houseLastSkipTime < HOUSE_SKIP_COOLDOWN) {
+      console.log("[House] SKIP 쿨타임 중, 무시");
+      return;
+    }
+    
+    if (
+      mouseX > houseSkipBtn.x &&
+      mouseX < houseSkipBtn.x + houseSkipBtn.w &&
+      mouseY > houseSkipBtn.y &&
+      mouseY < houseSkipBtn.y + houseSkipBtn.h
+    ) {
+      console.log("[House] SKIP 버튼 클릭 → 다음 단계");
+      houseForceNextStep();
+    }
+    return;
+  }
 
+  // 완료 상태에서는 QR 버튼 처리
   if (
     mouseX > houseQRBtn.x &&
     mouseX < houseQRBtn.x + houseQRBtn.w &&
@@ -374,6 +396,24 @@ function mousePressedHouseGame() {
       goToQR();
     }
   }
+}
+
+function houseForceNextStep() {
+  if (houseStep === 1) {
+    houseAxeCount = 1;
+    houseStep = 2;
+  } else if (houseStep === 2) {
+    houseSawCycles = 3;
+    houseStep = 3;
+  } else if (houseStep === 3) {
+    houseHammerCycles = 5;
+    houseStep = 4;
+  } else if (houseStep === 4) {
+    houseWaveCycles = 3;
+    houseStepDone = true;
+  }
+
+  console.log("[House] 강제 진행 후 houseStep:", houseStep, "houseStepDone:", houseStepDone);
 }
 
 function drawHouseUI() {
@@ -432,4 +472,33 @@ function drawHouseUI() {
     desc = `4단계) 집들이 인사: 오른손을 좌우로 흔들어 보세요! (${houseWaveCycles}/3)`;
 
   text(desc, width / 2, 30);
+  
+  // 🔹 오른쪽 위 SKIP 버튼
+  let btnW = 80;
+  let btnH = 30;
+  let btnX = width - btnW / 2 - 20;
+  let btnY = 30;
+
+  houseSkipBtn.x = btnX - btnW / 2;
+  houseSkipBtn.y = btnY - btnH / 2;
+  houseSkipBtn.w = btnW;
+  houseSkipBtn.h = btnH;
+
+  let hovering =
+    mouseX > houseSkipBtn.x &&
+    mouseX < houseSkipBtn.x + houseSkipBtn.w &&
+    mouseY > houseSkipBtn.y &&
+    mouseY < houseSkipBtn.y + houseSkipBtn.h;
+
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
+  rect(houseSkipBtn.x, houseSkipBtn.y, btnW, btnH, 8);
+
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("SKIP", btnX, btnY);
+  pop();
 }
