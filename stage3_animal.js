@@ -471,25 +471,48 @@ function mousePressedAnimalGame() {
   }
 }
 
-
 function animalForceNextStep() {
-  // 현재 단계에 따라 약간 정리
+  // 1단계 → 2단계로 SKIP할 때
+  if (animalCurrentStep === 1) {
+    // 밥주기 단계로 넘어가면서 당근/그릇을 보이게!
+    animalCurrentStep = 2;
+    animalStepDone = false;
+
+    animalFood.visible = true;
+    animalBowl.visible = true;
+
+    console.log("[Animal] SKIP: 1 → 2 (밥주기 시작, 당근/그릇 활성화)");
+    return;
+  }
+
+  // 2단계 → 3단계 SKIP할 때
   if (animalCurrentStep === 2) {
     // 밥주기 건너뛰면 당근/그릇 다 치우기
     animalFood.visible = false;
     animalBowl.visible = false;
-  }
 
-  if (animalCurrentStep < 4) {
-    animalCurrentStep++;
-    animalStepDone = false;  // 새 단계 시작
-  } else if (animalCurrentStep === 4) {
-    // 4단계를 스킵하면 곧바로 완료 상태로
-    animalCurrentStep = 5;
+    animalCurrentStep = 3;
     animalStepDone = false;
+
+    console.log("[Animal] SKIP: 2 → 3 (밥주기 건너뜀)");
+    return;
   }
 
-  console.log("[Animal] 강제 진행 후 단계:", animalCurrentStep);
+  // 3단계 → 4단계 SKIP
+  if (animalCurrentStep === 3) {
+    animalCurrentStep = 4;
+    animalStepDone = false;
+    console.log("[Animal] SKIP: 3 → 4 (쓰다듬기 건너뜀)");
+    return;
+  }
+
+  // 4단계 → 완료 상태(5) SKIP
+  if (animalCurrentStep === 4) {
+    animalCurrentStep = 5;    // 완료 화면
+    animalStepDone = false;
+    console.log("[Animal] SKIP: 4 → 5 (완료로)");
+    return;
+  }
 }
 
 
