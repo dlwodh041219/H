@@ -35,9 +35,8 @@ let animalSwingCount = 0;
 let animalSwingTimer = 0;
 let ANIMAL_SWING_MAX_FRAMES = 30;
 
-let animalDoneTime = null;
-let ANIMAL_DONE_DELAY = 1000; // 1초
-let animalGoToQRTriggered = false;
+let animalQRBtn = { x: 0, y: 0, w: 0, h: 0 };
+let amimalGoToQRTriggered = false;
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -180,19 +179,6 @@ function drawAnimalGame() {
       animalSwingState = "WAIT_UP";
       animalSwingCount = 0;
       animalSwingTimer = 0;
-    }
-  }
-  
-  // 1초 동안 "완료" 메시지만 보여주고 그 다음 QR로 이동
-  if (animalCurrentStep > 4 && !animalGoToQRTriggered) {
-    if (animalDoneTime === null) {
-      // 처음 완료된 순간 시간 저장
-      animalDoneTime = millis();
-    } else if (millis() - animalDoneTime >= ANIMAL_DONE_DELAY) {
-      animalGoToQRTriggered = true;
-      if (typeof goToQR === "function") {
-        goToQR();
-      }
     }
   }
 }
@@ -397,6 +383,23 @@ function animalDrawKeypoints() {
   }
 }
 
+function mousePressedAnimalGame() {
+  // 아직 완료 상태가 아니면 클릭 무시
+  if (animalCurrentStep <= 4) return;
+
+  if (
+    mouseX > animalQRBtn.x &&
+    mouseX < animalQRBtn.x + animalQRBtn.w &&
+    mouseY > animalQRBtn.y &&
+    mouseY < animalQRBtn.y + animalQRBtn.h
+  ) {
+    if (!animalGoToQRTriggered && typeof goToQR === "function") {
+      animalGoToQRTriggered = true;
+      console.log("[Animal] QR 저장 버튼 클릭 → goToQR()");
+      goToQR();
+    }
+  }
+}
 
 // ================== UI ==================
 function animalDrawUI() {
@@ -407,6 +410,46 @@ function animalDrawUI() {
   textSize(20);
   textAlign(CENTER, CENTER);
 
+  // ✅ 완료 상태일 때는: 문구 + QR버튼 그리고 return
+  if (animalCurrentStep > 4) {
+    let desc = "🎉 동물 키우기 완료! 행복한 시간을 보내세요!🎉";
+    text(desc, width / 2, 30);
+
+    // QR 저장 버튼 (우측 상단)
+    let btnW = 120;
+    let btnH = 36;
+    let btnX = width - btnW / 2 - 20;  // 오른쪽 여백 20
+    let btnY = 30;                     // 상단 바 가운데 높이
+
+    // 전역 버튼 영역 갱신
+    animalQRBtn.x = btnX - btnW / 2;
+    animalQRBtn.y = btnY - btnH / 2;
+    animalQRBtn.w = btnW;
+    animalQRBtn.h = btnH;
+
+    // hover 효과 (마우스 위치로)
+    let hovering =
+      mouseX > animalQRBtn.x &&
+      mouseX < animalQRBtn.x + animalQRBtn.w &&
+      mouseY > animalQRBtn.y &&
+      mouseY < animalQRBtn.y + animalQRBtn.h;
+
+    push();
+    rectMode(CORNER);
+    noStroke();
+    fill(hovering ? color(230, 164, 174) : color(200, 150, 160));
+    rect(animalQRBtn.x, animalQRBtn.y, btnW, btnH, 10);
+
+    fill(0);
+    textSize(16);
+    textAlign(CENTER, CENTER);
+    text("QR 저장", btnX, btnY);
+    pop();
+
+    return; // ✅ 아래 일반 단계 UI는 그리지 않고 종료
+  }
+
+  // ✅ 여기 아래는 진행 중 단계(1~4)일 때만
   let desc = "";
   if (animalCurrentStep === 1)
     desc = "1단계) 안아주기: 양팔을 크게 벌리세요!";
@@ -416,8 +459,6 @@ function animalDrawUI() {
     desc = `3단계) 쓰다듬기: 머리 위로 손 왕복! ${animalWaveCount}/${ANIMAL_REQUIRED_WAVES}`;
   else if (animalCurrentStep === 4)
     desc = `4단계) 놀아주기: 양팔을 위아래로 왕복! ${animalSwingCount}/3`;
-  if (animalCurrentStep > 4)
-    desc = "🎉 동물 키우기 완료! 행복한 시간을 보내세요!🎉";
 
   text(desc, width / 2, 30);
 }

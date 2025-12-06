@@ -425,9 +425,13 @@ function mousePressed() {
       // 동물 이모지 커스터마이징 화면 (나중에 구현)
       mousePressedAnimalEmoji();
     }
-  }
-
-  if (phase === 5) {
+  } else if (phase === 4 && gameMode === "play") {
+    // 🔹 각 게임별 클릭 처리만 호출
+    if (selectedGame === "animal")  mousePressedAnimalGame();
+    else if (selectedGame === "cooking") mousePressedCookingGame();
+    else if (selectedGame === "house")   mousePressedHouseGame();
+  } else if (phase === 5) {
+    // 🔹 QR 화면에서의 "처음으로" 버튼
     let btnX = width / 2;
     let btnY = height - 70;
     let btnW = 220;
@@ -440,7 +444,7 @@ function mousePressed() {
       mouseY < btnY + btnH / 2;
 
     if (hovering) {
-      resetAllState()
+      resetAllState();
     }
   }
 }

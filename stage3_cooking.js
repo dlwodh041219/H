@@ -52,8 +52,7 @@ let COOK_TASTE_OPEN_FRAMES = 3;
 let COOK_TASTE_CLOSE_FRAMES = 3;
 let COOK_TASTE_TARGET = 3;
 
-let cookDoneTime = null;
-let COOK_DONE_DELAY = 1000; // 1초
+let cookQRBtn = { x: 0, y: 0, w: 0, h: 0 };
 let cookGoToQRTriggered = false;
 
 function initCookingGame() {
@@ -202,16 +201,6 @@ function drawCookingGame() {
   // 디버깅용 키포인트 표시
   if (cookCurrentPose && cookStage !== 3 && cookStage !== 4) {
     cookDrawKeypoints();
-  }
-
-   // 4단계 완료 후, 1초 동안 "요리 완료!" 화면 보여주고 QR로 이동
-  if (cookStage === 4 && cookStageDone && !cookGoToQRTriggered) {
-    if (cookDoneTime !== null && millis() - cookDoneTime >= COOK_DONE_DELAY) {
-      cookGoToQRTriggered = true;
-      if (typeof goToQR === "function") {
-        goToQR();
-      }
-    }
   }
 }
 
@@ -424,11 +413,6 @@ function cookUpdateTaste() {
     cookStageDone = true;
     cookDetectedText =
       "🎉요리 완료! 사랑하는 사람들과 음식을 나눠 보세요!🎉";
-    
-    cookDoneTime = millis();
-      if (typeof goToQR === "function") {
-      goToQR();
-    }
   }
 }
 
@@ -467,6 +451,24 @@ function cookDrawKeypoints() {
   }
 }
 
+function mousePressedCookingGame() {
+  // 아직 완료 상태가 아니면 무시
+  if (!(cookStage === 4 && cookStageDone)) return;
+
+  if (
+    mouseX > cookQRBtn.x &&
+    mouseX < cookQRBtn.x + cookQRBtn.w &&
+    mouseY > cookQRBtn.y &&
+    mouseY < cookQRBtn.y + cookQRBtn.h
+  ) {
+    if (!cookGoToQRTriggered && typeof goToQR === "function") {
+      cookGoToQRTriggered = true;
+      console.log("[Cooking] QR 저장 버튼 클릭 → goToQR()");
+      goToQR();
+    }
+  }
+}
+
 // 화면 표시(UI)
 function cookDrawStageInfo() {
   fill(0, 180);
@@ -476,6 +478,47 @@ function cookDrawStageInfo() {
   textSize(20);
   textAlign(CENTER, CENTER);
 
+  // ✅ 4단계 완료 상태일 때: 완료 문구 + QR 저장 버튼
+  if (cookStage === 4 && cookStageDone) {
+    let desc = `🎉요리하기 완료! 사랑하는 사람들과 음식을 나누세요!🎉`;
+    text(desc, width / 2, 30);
+
+    // QR 버튼 위치
+    let btnW = 120;
+    let btnH = 36;
+    let btnCenterX = width - btnW / 2 - 20; // 오른쪽 여백
+    let btnCenterY = 30;
+
+    // 버튼 영역 저장 (mousePressedCookingGame에서 사용)
+    cookQRBtn.x = btnCenterX - btnW / 2;
+    cookQRBtn.y = btnCenterY - btnH / 2;
+    cookQRBtn.w = btnW;
+    cookQRBtn.h = btnH;
+
+    // hover
+    let hovering =
+      mouseX > cookQRBtn.x &&
+      mouseX < cookQRBtn.x + cookQRBtn.w &&
+      mouseY > cookQRBtn.y &&
+      mouseY < cookQRBtn.y + cookQRBtn.h;
+
+    // 버튼 그리기
+    push();
+    rectMode(CORNER);
+    noStroke();
+    fill(hovering ? color(230, 164, 174) : color(200, 150, 160));
+    rect(cookQRBtn.x, cookQRBtn.y, btnW, btnH, 10);
+
+    fill(0);
+    textSize(16);
+    textAlign(CENTER, CENTER);
+    text("QR 저장", btnCenterX, btnCenterY);
+    pop();
+
+    return; // 완료 화면이면 여기서 UI 끝
+  }
+
+  // ✅ 진행 중 단계 텍스트
   let desc = "";
   if (cookStage === 0) {
     desc = `1단계) 재료 손질: 오른손을 머리 위에서 아래로 크게 3회 내리세요! (${cookChopCycles}/3)`;
@@ -485,9 +528,6 @@ function cookDrawStageInfo() {
     desc = `3단계) 재료 볶기: 오른손을 왼쪽↔오른쪽으로 크게 3회 움직여요! (${cookFryCycles}/3)`;
   } else if (cookStage === 3) {
     desc = `4단계) 간보기: 입을 크게 벌렸다 닫는 동작을 3회 하세요! (${cookTasteCycles}/3)`;
-  } else if (cookStage === 4) {
-    // 전 단계 다 끝난 뒤
-    desc = `🎉요리하기 완료! 사랑하는 사람들과 음식을 나누세요!🎉`;
   }
 
   text(desc, width / 2, 30);

@@ -40,8 +40,7 @@ let houseWaveCycles = 0;
 let houseWaveLeftStreak = 0;
 let houseWaveRightStreak = 0;
 
-let houseDoneTime = null;
-let HOUSE_DONE_DELAY = 1000; // 1초
+let houseQRBtn = { x: 0, y: 0, w: 0, h: 0 };
 let houseGoToQRTriggered = false;
 
 // 초기화 (메인에서 phase=3 진입할 때 호출)
@@ -159,18 +158,6 @@ function drawHouseGame() {
   }
 
   drawHouseUI();
-
-  if (houseStepDone) {
-    if (houseDoneTime === null) {
-      // 처음으로 완료된 순간 시간 기록
-      houseDoneTime = millis();
-    } else if (!houseGoToQRTriggered && millis() - houseDoneTime >= HOUSE_DONE_DELAY) {
-      houseGoToQRTriggered = true;
-      if (typeof goToQR === "function") {
-        goToQR();
-      }
-    }
-  }
 }
 
 // 1단계: 도끼질
@@ -372,6 +359,23 @@ function drawHouseKeypoints() {
   }
 }
 
+function mousePressedHouseGame() {
+  if (!houseStepDone) return;  // 아직 완료 아니면 무시
+
+  if (
+    mouseX > houseQRBtn.x &&
+    mouseX < houseQRBtn.x + houseQRBtn.w &&
+    mouseY > houseQRBtn.y &&
+    mouseY < houseQRBtn.y + houseQRBtn.h
+  ) {
+    if (!houseGoToQRTriggered && typeof goToQR === "function") {
+      houseGoToQRTriggered = true;
+      console.log("[House] QR 저장 버튼 클릭 → goToQR()");
+      goToQR();
+    }
+  }
+}
+
 function drawHouseUI() {
   fill(0, 180);
   rect(0, 0, width, 60);
@@ -380,6 +384,43 @@ function drawHouseUI() {
   textSize(20);
   textAlign(CENTER, CENTER);
 
+  // ✅ 집 짓기 완료 상태라면: 완료 문구 + QR 저장 버튼
+  if (houseStepDone) {
+    let desc = "🎉 집 짓기 완료! 손님들과 즐거운 시간을 보내세요!🎉";
+    text(desc, width / 2, 30);
+
+    let btnW = 120;
+    let btnH = 36;
+    let btnCenterX = width - btnW / 2 - 20;
+    let btnCenterY = 30;
+
+    houseQRBtn.x = btnCenterX - btnW / 2;
+    houseQRBtn.y = btnCenterY - btnH / 2;
+    houseQRBtn.w = btnW;
+    houseQRBtn.h = btnH;
+
+    let hovering =
+      mouseX > houseQRBtn.x &&
+      mouseX < houseQRBtn.x + houseQRBtn.w &&
+      mouseY > houseQRBtn.y &&
+      mouseY < houseQRBtn.y + houseQRBtn.h;
+
+    push();
+    rectMode(CORNER);
+    noStroke();
+    fill(hovering ? color(230, 164, 174) : color(200, 150, 160));
+    rect(houseQRBtn.x, houseQRBtn.y, btnW, btnH, 10);
+
+    fill(0);
+    textSize(16);
+    textAlign(CENTER, CENTER);
+    text("QR 저장", btnCenterX, btnCenterY);
+    pop();
+
+    return;
+  }
+
+  // ✅ 진행 중 단계 텍스트
   let desc = "";
   if (houseStep === 1)
     desc = "1단계) 도끼질: 양손 깍지를 끼고, 머리 위에서 아래로 크게 내리세요!";
@@ -389,8 +430,6 @@ function drawHouseUI() {
     desc = `3단계) 망치질: 오른손을 위아래로 왕복하세요! (${houseHammerCycles}/5)`;
   else if (houseStep === 4)
     desc = `4단계) 집들이 인사: 오른손을 좌우로 흔들어 보세요! (${houseWaveCycles}/3)`;
-  if (houseStepDone)
-    desc = "🎉 집 짓기 완료! 손님들과 즐거운 시간을 보내세요!🎉";
 
   text(desc, width / 2, 30);
 }
