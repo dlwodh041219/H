@@ -81,6 +81,7 @@ function draw() {
   // 공통 커서
   push();
   textAlign(CENTER, CENTER);
+  textFont("sans-serif");
   textSize(45);
   noStroke();
   fill(0);
@@ -109,8 +110,8 @@ function drawStartPage() {
   pop();
 
   //"이모지 코레오"
-  textAlign(CENTER);
   push();
+  textAlign(CENTER, BASELINE);
   textFont(fontStart);
   fill(247, 207, 99);
   stroke(0);
@@ -153,6 +154,8 @@ function drawStartPage() {
   }
 
   //"START!"
+  push();
+  textAlign(CENTER, BASELINE);
   stroke(0);
   strokeWeight(1);
   fill(230, 164, 174);
@@ -170,6 +173,7 @@ function drawStartPage() {
   translate(500, 268);
   rotate(radians(20));
   noStroke();
+  textFont("sans-serif");
   textSize(40);
   text("🐶", 0, 0);
   pop();
@@ -177,6 +181,7 @@ function drawStartPage() {
   push();
   translate(120, 300);
   rotate(radians(-30));
+  textFont("sans-serif");
   textSize(40);
   text("😚", 0, 0);
   pop();
@@ -184,6 +189,7 @@ function drawStartPage() {
   push();
   translate(90, 415);
   rotate(radians(10));
+  textFont("sans-serif");
   textSize(40);
   text("🔨", 0, 0);
   pop();
@@ -192,6 +198,7 @@ function drawStartPage() {
   translate(540, 435);
   rotate(radians(10));
   textSize(40);
+  textFont("sans-serif");
   text("🏠", 0, 0);
   pop();
 
@@ -199,6 +206,7 @@ function drawStartPage() {
   translate(230, 245);
   rotate(radians(-10));
   textSize(40);
+  textFont("sans-serif");
   text("👕", 0, 0);
   pop();
 
@@ -206,6 +214,7 @@ function drawStartPage() {
   translate(570, 345);
   rotate(radians(10));
   textSize(40);
+  textFont("sans-serif");
   text("🥞", 0, 0);
   pop();
 }

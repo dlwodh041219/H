@@ -378,6 +378,7 @@ function animalDrawKeypoints() {
 
   if (animalHeadY) {
     stroke(255, 0, 0);
+    strokeWeight(2);
     line(0, animalHeadY, width, animalHeadY);
     noStroke();
   }

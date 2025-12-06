@@ -352,12 +352,16 @@ function drawHumanEmojiStep1(margin) {
   }
   pop()
 
+  push();
   // 오른쪽 파트
-  textSize(15)
-  text('눈썹', width/2, margin + 20)
-  text('눈',width/2, margin + 120)
-  text('코',width/2, margin + 220)
-  text('입',width/2, margin + 320)
+  textFont(fontTemplate)
+  textSize(15);
+  fill(0);
+  text('눈썹', width/2, margin + 30)
+  text('눈',width/2, margin + 130)
+  text('코',width/2, margin + 230)
+  text('입',width/2, margin + 330)
+  pop();
 
   let intervalY = (height - 2*margin) / 4;
   let intervalX = (width/2) / 4;
@@ -512,11 +516,14 @@ function drawHumanEmojiStep2(margin) {
   pop();
 
   // 오른쪽 파트: 버튼 배치
+  push();
+  textFont(fontTemplate)
   textSize(15);
   textAlign(LEFT, CENTER);
   fill(0);
   text('헤어', width / 2, margin + 20);
   text('악세사리', width / 2, margin + 227);
+  pop();
 
   let intervalY = (height - 2 * margin) / 4;
   let intervalX = (width / 2) / 4;
