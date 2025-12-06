@@ -111,7 +111,7 @@ function drawAvatarSelect() {
   
   let backW = 80;
   let backH = 34;
-  let backX = 40;
+  let backX = 42;
   let backY = 23;
 
   let hovering =
@@ -125,7 +125,7 @@ function drawAvatarSelect() {
   stroke(0);
   strokeWeight(1.5);
   fill(hovering ? color(250, 210, 120) : color(230, 190, 140));
-  rect(backX, backY, backW, backH, 8);
+  rect(backX, backY, backW, backH, 10);
 
   fill(0);
   noStroke();
@@ -306,6 +306,7 @@ function drawHumanEmojiPage() {
       humanNextStepBtn.y + humanNextStepBtn.h / 2
     );
     pop();
+
   }else if (humanEmojiStep === 2) {
     // 2단계: "게임 시작 >" (항상 눌러도 됨)
     let over = isMouseOver(humanNextStepBtn);
@@ -352,6 +353,7 @@ function drawHumanEmojiStep1(margin) {
 
   push();
   fill(220);
+  noStroke();
   rect(humanFaceRegion.x, humanFaceRegion.y, humanFaceRegion.w, humanFaceRegion.h);
   pop();
 
@@ -410,6 +412,7 @@ function drawHumanEmojiStep1(margin) {
   textFont(fontTemplate)
   textSize(15);
   fill(0);
+  noStroke();
   text('눈썹', width/2 - 18, margin + intervalY - 22)
   text('눈',width/2 - 18, margin + intervalY - 22 + 100)
   text('코',width/2 - 18, margin + intervalY - 22 + 200)
@@ -514,6 +517,7 @@ function drawHumanEmojiStep2(margin) {
 
   push();
   fill(220);
+  noStroke();
   rect(humanFaceRegion.x, humanFaceRegion.y, humanFaceRegion.w, humanFaceRegion.h);
   pop();
 
@@ -573,6 +577,7 @@ function drawHumanEmojiStep2(margin) {
   textFont(fontTemplate)
   textSize(15);
   textAlign(CENTER, CENTER);
+  noStroke();
   fill(0);
   text('헤어', width/2 - 18, margin + intervalY - 26);
   text('소품', width/2 - 18, margin + intervalY - 26 + 200);

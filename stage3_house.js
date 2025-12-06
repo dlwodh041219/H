@@ -99,7 +99,10 @@ function gotHousePoses(results) {
   housePoses = results || [];
   houseCurrentPose = housePoses[0] || null;
 
-  if (houseCurrentPose) updateHouseBodyHeights();
+  if (houseCurrentPose) {
+    updateHouseBodyHeights();
+    markActivity();    // 🔹 몸이 보이면 활동
+  }
 }
 
 // 특정 관절 가져오기 + 스무딩
@@ -365,24 +368,49 @@ function drawHouseKeypoints() {
 }
 
 function mousePressedHouseGame() {
+  // 🔹 1) BACK 버튼
   if (
     mouseX > houseBackBtn.x &&
     mouseX < houseBackBtn.x + houseBackBtn.w &&
     mouseY > houseBackBtn.y &&
     mouseY < houseBackBtn.y + houseBackBtn.h
   ) {
-    console.log("[House] BACK 버튼 클릭 → 아바타 화면으로");
-    backToAvatarFromGame();
+    console.log("[House] BACK 버튼 클릭");
+
+    // ✅ 완료 화면이라고 가정 (houseStepDone == true일 때)
+    if (houseStepDone && houseStep === 4) {
+      // → 4단계를 다시 수행해야 하도록 리셋
+      resetHouseStep4();
+      console.log("[House] BACK (완료 화면) → 4단계 다시 시작");
+      return;
+    }
+
+    // ✅ 진행 중(1~4 단계)
+    if (houseStep >= 1 && houseStep <= 4) {
+      if (houseStep === 1) {
+        // 1단계에서 BACK → 이모지 2단계
+        backToAvatarFromGame();
+      } else {
+        // 2,3,4 단계에서 BACK → 이전 집짓기 단계로
+        houseStep--;
+
+        if (houseStep === 1) resetHouseStep1();
+        else if (houseStep === 2) resetHouseStep2();
+        else if (houseStep === 3) resetHouseStep3();
+
+        console.log("[House] BACK → 이전 집짓기 단계:", houseStep);
+      }
+    }
     return;
   }
 
+  // 🔹 2) SKIP (완료되지 않은 경우만)
   if (!houseStepDone) {
-    // 쿨타임 체크
     if (millis() - houseLastSkipTime < HOUSE_SKIP_COOLDOWN) {
       console.log("[House] SKIP 쿨타임 중, 무시");
       return;
     }
-    
+
     if (
       mouseX > houseSkipBtn.x &&
       mouseX < houseSkipBtn.x + houseSkipBtn.w &&
@@ -390,12 +418,13 @@ function mousePressedHouseGame() {
       mouseY < houseSkipBtn.y + houseSkipBtn.h
     ) {
       console.log("[House] SKIP 버튼 클릭 → 다음 단계");
+      houseLastSkipTime = millis();
       houseForceNextStep();
     }
     return;
   }
 
-  // 완료 상태에서는 QR 버튼 처리
+  // 🔹 3) 완료 상태: QR 버튼
   if (
     mouseX > houseQRBtn.x &&
     mouseX < houseQRBtn.x + houseQRBtn.w &&
@@ -409,6 +438,7 @@ function mousePressedHouseGame() {
     }
   }
 }
+
 
 function houseForceNextStep() {
   if (houseStep === 1) {
@@ -428,12 +458,52 @@ function houseForceNextStep() {
   console.log("[House] 강제 진행 후 houseStep:", houseStep, "houseStepDone:", houseStepDone);
 }
 
+
+// ================== 집짓기 단계별 리셋 함수 ==================
+function resetHouseStep1() {
+  // 1단계: 도끼질
+  houseAxeState = "WAIT_UP";
+  houseAxeTimer = 0;
+  houseAxeCount = 0;
+  houseAxeUpStreak = 0;
+  houseAxeDownStreak = 0;
+  houseStepDone = false;
+}
+
+function resetHouseStep2() {
+  // 2단계: 톱질
+  houseSawState = "LEFT";
+  houseSawCycles = 0;
+  houseSawLeftStreak = 0;
+  houseSawRightStreak = 0;
+  houseStepDone = false;
+}
+
+function resetHouseStep3() {
+  // 3단계: 망치질
+  houseHammerState = "UP";
+  houseHammerCycles = 0;
+  houseHammerUpStreak = 0;
+  houseHammerDownStreak = 0;
+  houseStepDone = false;
+}
+
+function resetHouseStep4() {
+  // 4단계: 인사
+  houseWaveState = "LEFT";
+  houseWaveCycles = 0;
+  houseWaveLeftStreak = 0;
+  houseWaveRightStreak = 0;
+  houseStepDone = false;
+}
+
+// ================== UI ==================
 function drawHouseUI() {
   fill(0, 180);
   rect(0, 0, width, 60);
 
   fill(255);
-  textSize(20);
+  textSize(19);
   textAlign(CENTER, CENTER);
   textFont(fontTemplate);
 

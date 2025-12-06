@@ -124,7 +124,10 @@ function cookGotPoses(results) {
   cookPoses = results || [];
   cookCurrentPose = cookPoses[0] || null;
 
-  if (cookCurrentPose) cookUpdateBodyHeights();
+  if (cookCurrentPose) {
+    cookUpdateBodyHeights();
+    markActivity();    // 🔹 몸이 잡힌 순간 활동 기록
+  }
 }
 
 // BodyPose 유틸 
@@ -359,6 +362,8 @@ function cookUpdateTaste() {
   let positions = cookTracker.getCurrentPosition();
   if (!positions) return;
 
+  markActivity();
+
   fill(255);
   stroke(0);
 
@@ -457,24 +462,59 @@ function cookDrawKeypoints() {
 }
 
 function mousePressedCookingGame() {
+  // 🔹 1) BACK 버튼 먼저 처리
   if (
     mouseX > cookBackBtn.x &&
     mouseX < cookBackBtn.x + cookBackBtn.w &&
     mouseY > cookBackBtn.y &&
     mouseY < cookBackBtn.y + cookBackBtn.h
   ) {
-    console.log("[Cooking] BACK 버튼 클릭 → 아바타 화면으로");
-    backToAvatarFromGame();
+    console.log("[Cooking] BACK 버튼 클릭");
+
+    // ✅ (완성 상태) 4단계까지 다 끝난 뒤의 화면
+    if (cookStage === 4 && cookStageDone) {
+      // 👉 stage 3의 완성단계에서 back은 stage 3의 4단계
+      // = 간보기 단계(cookStage 3)로 되돌리고, 그 단계 리셋
+      cookStage = 3;
+      resetCookingStageTaste();
+      console.log("[Cooking] BACK (완료 화면) → 4단계(간보기) 다시 시작");
+      return;
+    }
+
+    // ✅ 진행 중인 단계 (0~3)
+    if (cookStage >= 0 && cookStage <= 3) {
+      if (cookStage === 0) {
+        // 👉 stage 3의 1단계에서 back은 stage 2 이모지 2단계
+        console.log("[Cooking] BACK → 이모지 커스텀으로 복귀");
+        backToAvatarFromGame();
+      } else {
+        // 👉 2,3,4 단계에서 back은 바로 이전 요리 단계로
+        cookStage--;   // 한 단계 뒤로
+
+        if (cookStage === 0) {
+          resetCookingStageChop();
+        } else if (cookStage === 1) {
+          resetCookingStagePour();
+        } else if (cookStage === 2) {
+          resetCookingStageFry();
+        }
+
+        console.log("[Cooking] BACK → 이전 요리 단계:", cookStage);
+      }
+    }
     return;
   }
 
+  // 🔹 2) SKIP / QR 처리
+  // 완료 상태가 아니면 SKIP 버튼만 작동
   if (!(cookStage === 4 && cookStageDone)) {
     // 쿨타임 체크
     if (millis() - cookLastSkipTime < COOK_SKIP_COOLDOWN) {
       console.log("[Cooking] SKIP 쿨타임 중, 무시");
       return;
     }
-    
+
+    // SKIP 버튼 클릭
     if (
       mouseX > cookSkipBtn.x &&
       mouseX < cookSkipBtn.x + cookSkipBtn.w &&
@@ -482,12 +522,13 @@ function mousePressedCookingGame() {
       mouseY < cookSkipBtn.y + cookSkipBtn.h
     ) {
       console.log("[Cooking] SKIP 버튼 클릭 → 다음 단계");
+      cookLastSkipTime = millis();   // ✅ 실제로 쿨타임 갱신
       cookForceNextStage();
     }
     return;
   }
 
-  // 🔹 완료 상태: QR 버튼 처리
+  // 🔹 3) 완료 상태: QR 버튼 처리
   if (
     mouseX > cookQRBtn.x &&
     mouseX < cookQRBtn.x + cookQRBtn.w &&
@@ -522,6 +563,56 @@ function cookForceNextStage() {
 
   console.log("[Cooking] 강제 진행 후 cookStage:", cookStage);
 }
+
+
+// ================== 요리하기 단계별 리셋 함수 ==================
+
+// 1단계: 재료 썰기 (cookStage === 0)
+function resetCookingStageChop() {
+  cookChopState = "WAIT_UP";
+  cookChopUpStreak = 0;
+  cookChopDownStreak = 0;
+  cookChopCycles = 0;
+  cookChopTimer = 0;
+
+  cookStageDone = false;
+  cookDetectedText = "";
+}
+
+// 2단계: 재료 넣기 (cookStage === 1)
+function resetCookingStagePour() {
+  cookBothState = "WAIT_UP";
+  cookBothUpStreak = 0;
+  cookBothDownStreak = 0;
+  cookBothCycles = 0;
+  cookBothTimer = 0;
+
+  cookStageDone = false;
+  cookDetectedText = "";
+}
+
+// 3단계: 볶기 (cookStage === 2)
+function resetCookingStageFry() {
+  cookFryState = "LEFT";
+  cookFryCycles = 0;
+  cookFryLeftStreak = 0;
+  cookFryRightStreak = 0;
+
+  cookStageDone = false;
+  cookDetectedText = "";
+}
+
+// 4단계: 간보기 (cookStage === 3)
+function resetCookingStageTaste() {
+  cookTasteState = "WAIT_OPEN";
+  cookTasteCycles = 0;
+  cookTasteOpenStreak = 0;
+  cookTasteCloseStreak = 0;
+
+  cookStageDone = false;
+  cookDetectedText = "";
+}
+
 
 // 화면 표시(UI)
 function cookDrawStageInfo() {

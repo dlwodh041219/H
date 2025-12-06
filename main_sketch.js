@@ -19,6 +19,10 @@ let CARD_W = 170;
 let CARD_H = 300;
 let CARD_Y = 235;
 
+let lastActivityTime = 0;
+let INACTIVITY_LIMIT = 90 * 1000; // 1분 30초
+
+
 function preload() {
   fontStart    = loadFont("Recipekorea.ttf");
   fontTemplate = loadFont("komi.otf");
@@ -31,6 +35,8 @@ function setup() {
   noCursor();
 
   setupAvatar();
+
+  lastActivityTime = millis();
 }
 
 function draw() {
@@ -88,6 +94,12 @@ function draw() {
   fill(0);
   text("👆", mouseX, mouseY);
   pop();
+
+  if (millis() - lastActivityTime > INACTIVITY_LIMIT) {
+    console.log("⏰ 1분 30초 동안 활동 없음 → 초기 화면으로 리셋");
+    resetAllState();      // 이미 phase=1, 카메라 정리 등을 해 주는 함수
+    lastActivityTime = millis();  // 리셋 직후 타이머 다시 시작
+  }
 }
 
 // 1단계: 첫 페이지
@@ -290,8 +302,8 @@ function drawTemplatePage() {
 
   let backW = 80;
   let backH = 34;
-  let backX = 40;  // 왼쪽 여백 20
-  let backY = 23;              // 상단 바 기준 높이
+  let backX = 42;
+  let backY = 23;
 
   let hovering =
     mouseX > backX - backW / 2 &&
@@ -420,7 +432,8 @@ function drawGamePage() {
 }
 
 function mousePressed() {
-  
+  markActivity();
+
   // 1단계: START 화면 → 템플릿 화면으로 이동
   if (phase === 1) {
     if (mouseX < 495 && mouseX > 145 && mouseY < 410 && mouseY > 290) {
@@ -589,6 +602,14 @@ function backToAvatarFromGame() {
     animalHandsfree.stop();
   }
 
+  // 동물 단계/플래그 리셋
+  if (typeof animalCurrentStep !== "undefined") {
+    animalCurrentStep = 1;
+  }
+  if (typeof animalStepDone !== "undefined") {
+    animalStepDone = false;
+  }
+
   // === 요리 게임 정리 ===
   if (typeof cookBodyPose !== "undefined" && cookBodyPose && cookBodyPose.detectStop) {
     cookBodyPose.detectStop();
@@ -604,6 +625,14 @@ function backToAvatarFromGame() {
     cookTracker = null;
   }
 
+  // 요리 단계/플래그 리셋
+  if (typeof cookStage !== "undefined") {
+    cookStage = 1;
+  }
+  if (typeof cookStageDone !== "undefined") {
+    cookStageDone = false;
+  }
+
   // === 집 짓기 정리 ===
   if (typeof houseBodyPose !== "undefined" && houseBodyPose && houseBodyPose.detectStop) {
     houseBodyPose.detectStop();
@@ -615,6 +644,14 @@ function backToAvatarFromGame() {
     houseVideo = null;
   }
 
+  // 집 짓기 단계/플래그 리셋
+  if (typeof houseStep !== "undefined") {
+    houseStep = 1;
+  }
+  if (typeof houseStepDone !== "undefined") {
+    houseStepDone = false;
+  }
+
   // init 플래그 리셋 (다시 들어가면 처음부터)
   animalInited  = false;
   cookingInited = false;
@@ -623,6 +660,17 @@ function backToAvatarFromGame() {
   // 게임 모드는 intro로, 화면은 아바타/이모지(phase 3)로
   gameMode = "intro";
   phase    = 3;
+
+  // ⬇️ 필요하면 여기서 "이모지 2단계"로 강제 이동하는 변수도 같이 설정해줘도 됨
+  // 예: humanEmojiStep = 2; 또는 animalEmojiStep = 2; 등 네 구조에 맞게
+}
+
+function markActivity() {
+  lastActivityTime = millis();
+}
+
+function mouseMoved() {
+  markActivity();
 }
 
 function goToQR() {

@@ -92,7 +92,10 @@ function animalGotPoses(results) {
   animalPoses = results || [];
   animalCurrentPose = animalPoses[0] || null;
 
-  if (animalCurrentPose) animalUpdateBodyHeights();
+  if (animalCurrentPose) {
+    animalUpdateBodyHeights();
+    markActivity();
+  }
 }
 
 // 특정 관절 + 스무딩
@@ -289,6 +292,10 @@ function animalGetHandCenters() {
   let right = null,
     left = null;
 
+  if (landmarks.length > 0) {
+    markActivity();
+  }
+
   for (let h = 0; h < landmarks.length; h++) {
     let lx = map(landmarks[h][0].x, 0, 1, 0, width);
     let ly = map(landmarks[h][0].y, 0, 1, 0, height);
@@ -391,24 +398,52 @@ function animalDrawKeypoints() {
 }
 
 function mousePressedAnimalGame() {
+  // 🔹 BACK 버튼 먼저 처리
   if (
     mouseX > animalBackBtn.x &&
     mouseX < animalBackBtn.x + animalBackBtn.w &&
     mouseY > animalBackBtn.y &&
     mouseY < animalBackBtn.y + animalBackBtn.h
   ) {
-    console.log("[Animal] BACK 버튼 클릭 → 아바타 화면으로");
-    backToAvatarFromGame();
-    return;
+    console.log("[Animal] BACK 버튼 클릭");
+
+    // ✅ 1) 동물게임 1~4단계 중일 때
+    if (animalCurrentStep >= 1 && animalCurrentStep <= 4) {
+
+      if (animalCurrentStep === 1) {
+        // 👉 stage 3의 1단계에서 BACK = stage 2 이모지 2단계로
+        if (typeof backToAvatarFromGame === "function") {
+          backToAvatarFromGame();
+        }
+      } else {
+        // 👉 2,3,4 단계에서 BACK = 이전 동물 단계로
+        animalCurrentStep--;
+
+        if (animalCurrentStep === 1) resetAnimalStep1();
+        else if (animalCurrentStep === 2) resetAnimalStep2();
+        else if (animalCurrentStep === 3) resetAnimalStep3();
+
+        console.log("[Animal] BACK → 이전 동물 단계:", animalCurrentStep);
+      }
+
+    // ✅ 2) 완료 상태 (currentStep > 4)
+    } else if (animalCurrentStep > 4) {
+      // stage 3의 완성단계에서 BACK = 4단계로
+      animalCurrentStep = 4;
+      resetAnimalStep4();
+      console.log("[Animal] BACK (완료 화면) → 4단계로 되돌리기");
+    }
+
+    return; // BACK 처리 끝
   }
 
+  // 🔹 여기서부터는 기존 SKIP / QR 로직 그대로
   if (animalCurrentStep <= 4) {
-    // 🔹 SKIP 쿨타임 체크
     if (millis() - animalLastSkipTime < ANIMAL_SKIP_COOLDOWN) {
       console.log("[Animal] SKIP 쿨타임 중, 무시");
       return;
     }
-    
+
     if (
       mouseX > animalSkipBtn.x &&
       mouseX < animalSkipBtn.x + animalSkipBtn.w &&
@@ -416,12 +451,12 @@ function mousePressedAnimalGame() {
       mouseY < animalSkipBtn.y + animalSkipBtn.h
     ) {
       console.log("[Animal] SKIP 버튼 클릭 → 다음 단계로");
+      animalLastSkipTime = millis();
       animalForceNextStep();
     }
     return;
   }
 
-  // 완료 상태일 때는 QR 버튼
   if (
     mouseX > animalQRBtn.x &&
     mouseX < animalQRBtn.x + animalQRBtn.w &&
@@ -435,6 +470,7 @@ function mousePressedAnimalGame() {
     }
   }
 }
+
 
 function animalForceNextStep() {
   // 현재 단계에 따라 약간 정리
@@ -455,6 +491,37 @@ function animalForceNextStep() {
 
   console.log("[Animal] 강제 진행 후 단계:", animalCurrentStep);
 }
+
+
+// ================== 동물 단계별 리셋 함수 ==================
+function resetAnimalStep1() {
+  // 안아주기(양팔 벌리기)
+  animalHoldStartTime = null;
+  animalStepDone = false;
+}
+
+function resetAnimalStep2() {
+  // 밥 주기 (당근 + 그릇 다시 보이게)
+  animalFood.visible = true;
+  animalBowl.visible = true;
+  animalStepDone = false;
+}
+
+function resetAnimalStep3() {
+  // 쓰다듬기
+  animalWaveState = "DOWN";
+  animalWaveCount = 0;
+  animalStepDone = false;
+}
+
+function resetAnimalStep4() {
+  // 동물과 놀기
+  animalSwingState = "WAIT_UP";
+  animalSwingCount = 0;
+  animalSwingTimer = 0;
+  animalStepDone = false;
+}
+
 
 // ================== UI ==================
 function animalDrawUI() {
