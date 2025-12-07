@@ -686,6 +686,6 @@ function animalDrawUI() {
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP", skipCenterX, centerY);
+  text("SKIP >", skipCenterX, centerY);
   pop();
 }
