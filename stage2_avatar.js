@@ -472,29 +472,29 @@ function drawHumanEmojiStep1(margin) {
 
   // 눈 버튼 위치 설정
   eyeBtn1.x = width/2+23;
-  eyeBtn1.y = 2*margin + intervalY +10;
+  eyeBtn1.y = 2*margin + intervalY +15;
 
   eyeBtn2.x = width/2 + intervalX + 23;
-  eyeBtn2.y = 2*margin + intervalY + 10;
+  eyeBtn2.y = 2*margin + intervalY + 15;
   
   eyeBtn3.x = width/2 + intervalX*2 + 23;
-  eyeBtn3.y = 2*margin + intervalY + 10;
+  eyeBtn3.y = 2*margin + intervalY + 15;
   
   eyeBtn4.x = width/2 + intervalX*3 + 23;
-  eyeBtn4.y = 2*margin + intervalY + 10;
+  eyeBtn4.y = 2*margin + intervalY + 15;
   
   // 코 버튼 위치
   noseBtn1.x = width/2+23;
-  noseBtn1.y = 2*margin + intervalY*2 +20;
+  noseBtn1.y = 2*margin + intervalY*2 +25;
 
   noseBtn2.x = width/2 + intervalX + 23;
-  noseBtn2.y = 2*margin + intervalY*2 + 20;
+  noseBtn2.y = 2*margin + intervalY*2 + 25;
   
   noseBtn3.x = width/2 + intervalX*2 + 23;
-  noseBtn3.y = 2*margin + intervalY*2 + 20;
+  noseBtn3.y = 2*margin + intervalY*2 + 25;
   
   noseBtn4.x = width/2 + intervalX*3 + 23;
-  noseBtn4.y = 2*margin + intervalY*2 + 20;
+  noseBtn4.y = 2*margin + intervalY*2 + 25;
   
   // 입 버튼 위치
   mouthBtn1.x = width/2 + 23
@@ -662,16 +662,16 @@ function drawHumanEmojiStep2(margin) {
   hairBtn4.y = 2*margin + 15;
   
   hairBtn5.x = width/2+23;
-  hairBtn5.y = 2*margin+ intervalY2 + 10;
+  hairBtn5.y = 2*margin+ intervalY2 + 15;
 
   hairBtn6.x = width/2 + intervalX2 + 23;
-  hairBtn6.y = 2*margin+intervalY2 + 10;
+  hairBtn6.y = 2*margin+intervalY2 + 15;
   
   hairBtn7.x = width/2 + intervalX2*2 + 23;
-  hairBtn7.y = 2*margin +intervalY2 + 10;
+  hairBtn7.y = 2*margin +intervalY2 + 15;
   
   hairBtn8.x = width/2 + intervalX2*3 + 23;
-  hairBtn8.y = 2*margin +intervalY2 + 10;
+  hairBtn8.y = 2*margin +intervalY2 + 15;
 
   // --- 악세사리 버튼 ---
   accBtn1.x = width/2+24;
@@ -1079,7 +1079,6 @@ function drawEmojiFace() {
     return createVector(sx / cnt, sy / cnt);
   };
 
-  // 왼쪽/오른쪽 눈, 코 위치
   let leftEye  = avg([362, 263, 386, 374]);
   let rightEye = avg([133, 33, 159, 145]);
   let nose     = pt(1);
@@ -1087,12 +1086,10 @@ function drawEmojiFace() {
   if (!leftEye || !rightEye || !nose) return;
 
   let eyeDist = dist(leftEye.x, leftEye.y, rightEye.x, rightEye.y);
-
   let dx = leftEye.x - rightEye.x;
   let dy = leftEye.y - rightEye.y;
   let angle = atan2(dy, dx);
 
-  // 크기
   let BASE_EYE_DIST = 60;
   let SCALE_GAIN    = 1.4;
   let scaleFactor   = (eyeDist / BASE_EYE_DIST) * SCALE_GAIN;
@@ -1102,13 +1099,24 @@ function drawEmojiFace() {
   let PART_W   = 85;
   let PART_H   = 65;
 
-  let EYE_OFFSET_Y   = -20;
-  let NOSE_OFFSET_Y  = 15;
-  let MOUTH_OFFSET_Y = 50;
-  let BROW_OFFSET_Y  = -45;
+  let EYE_OFFSET_Y   = -5;
+  let NOSE_OFFSET_Y  = 23;
+  let MOUTH_OFFSET_Y = 53;
+  let BROW_OFFSET_Y  = -25;
 
-  // 코 기준에서 전체 이모지 얼굴을 위로 올리는 양
-  let GLOBAL_SHIFT_Y = 18;
+  // ★ 전체 이모지가 너무 위에 붙어 있으면 이 값을 줄이거나 음수로
+  //   (기존 18이었다면 ↓ 정도로 조정해봐)
+  let GLOBAL_SHIFT_Y = 8;
+
+  // ★ 헤어가 특히 위에 있으면 이 값도 조금 올려준다 (위로 +, 아래로 -)
+  //   기존 -10 이었다면 -2 ~ 0 정도가 무난
+  let HAIR_OFFSET_Y = -10;
+
+  let ACC_W = 200;
+  let ACC_H = 200;
+  let ACC_OFFSET_Y = 0;
+
+  let GLASS_OFFSET_Y = 8; // 기존 5였다면 살짝 더 아래
 
   noStroke();
 
@@ -1117,7 +1125,7 @@ function drawEmojiFace() {
   rotate(angle);
   scale(scaleFactor);
 
-  // 얼굴 축 방향으로 전체를 위로 이동
+  // 코 기준에서 전체를 약간 위로 이동하는 값 (줄이면 전체가 아래로 감)
   translate(0, -GLOBAL_SHIFT_Y);
 
   imageMode(CENTER);
@@ -1171,32 +1179,23 @@ function drawEmojiFace() {
     image(browImgSel, 0, BROW_OFFSET_Y, PART_W, PART_H);
   }
 
-  // 헤어 (2단계에서 선택하면 같이 따라다님)
-  let HAIR_W = 200;
-  let HAIR_H = 200;
-  let HAIR_OFFSET_Y = -10;   // 필요하면 숫자 조금씩 조절
+  // ★ 헤어 (이 오프셋이 캠 화면에서 위/아래 위치를 결정)
+  if (selectedHairNum === 1 && hairImg1)      image(hairImg1, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 2 && hairImg2) image(hairImg2, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 3 && hairImg3) image(hairImg3, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 4 && hairImg4) image(hairImg4, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 5 && hairImg5) image(hairImg5, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 6 && hairImg6) image(hairImg6, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 7 && hairImg7) image(hairImg7, 0, HAIR_OFFSET_Y, 200, 200);
+  else if (selectedHairNum === 8 && hairImg8) image(hairImg8, 0, HAIR_OFFSET_Y, 200, 200);
 
-  if (selectedHairNum === 1 && hairImg1)      image(hairImg1, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 2 && hairImg2) image(hairImg2, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 3 && hairImg3) image(hairImg3, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 4 && hairImg4) image(hairImg4, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 5 && hairImg5) image(hairImg5, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 6 && hairImg6) image(hairImg6, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 7 && hairImg7) image(hairImg7, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-  else if (selectedHairNum === 8 && hairImg8) image(hairImg8, 0, HAIR_OFFSET_Y, HAIR_W, HAIR_H);
-
-  // 소품(악세사리)
-  let ACC_W = 200;
-  let ACC_H = 200;
-  let ACC_OFFSET_Y = 0;
-
+  // 소품
   if (selectedAccNum === 1 && accImg1)      image(accImg1, 0, ACC_OFFSET_Y, ACC_W, ACC_H);
   else if (selectedAccNum === 2 && accImg2) image(accImg2, 0, ACC_OFFSET_Y, ACC_W, ACC_H);
   else if (selectedAccNum === 3 && accImg3) image(accImg3, 0, ACC_OFFSET_Y, ACC_W, ACC_H);
   else if (selectedAccNum === 4 && accImg4) image(accImg4, 0, ACC_OFFSET_Y, ACC_W, ACC_H);
 
   // 안경
-  let GLASS_OFFSET_Y = 5;
   if (selectedGlassNum === 1 && glassImg1) {
     image(glassImg1, 0, GLASS_OFFSET_Y, 200, 200);
   } else if (selectedGlassNum === 2 && glassImg2) {
