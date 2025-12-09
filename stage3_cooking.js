@@ -1,4 +1,4 @@
-let cookVideo;
+// let cookVideo;           // ★ 이제 사용 안 함 (전역 video 재사용)
 let cookBodyPose;
 let cookPoses = [];
 let cookCurrentPose = null;
@@ -61,21 +61,23 @@ let cookLastSkipTime = 0;          // ★ 추가
 let COOK_SKIP_COOLDOWN = 800;    // ms
 
 function initCookingGame() {
-  // 카메라
-  cookVideo = createCapture(VIDEO);
-  cookVideo.size(width, height);
-  cookVideo.hide();
+  // ★ 카메라: stage2_avatar.js 에서 쓰는 전역 video 재사용
+  if (!video) {
+    video = createCapture(VIDEO);
+    video.size(width, height);
+    video.hide();
+  }
 
-  // BodyPose (MoveNet)
+  // ★ BodyPose (MoveNet) - 공용 video 사용
   cookBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
     console.log("cook bodyPose ready");
-    cookBodyPose.detectStart(cookVideo, cookGotPoses);
+    cookBodyPose.detectStart(video, cookGotPoses);   // ★ cookVideo → video
   });
 
-  // Face tracking (clmtrackr)
+  // Face tracking (clmtrackr) - 공용 video 사용
   cookTracker = new clm.tracker();
   cookTracker.init();
-  cookTracker.start(cookVideo.elt);
+  cookTracker.start(video.elt);                      // ★ cookVideo.elt → video.elt
 
   // 상태 리셋
   cookResetState();
@@ -179,12 +181,8 @@ function cookUpdateBodyHeights() {
 function drawCookingGame() {
   background(0);
 
-  // 영상 미러링
-  push();
-  translate(width, 0);
-  scale(-1, 1);
-  image(cookVideo, 0, 0, width, height);
-  pop();
+  // ★ 캠 풀스크린 + 이모지 아바타 (stage2_avatar.js 에 정의된 함수)
+  drawFaceFullScreen();
 
   // 안내 텍스트
   cookDrawStageInfo();

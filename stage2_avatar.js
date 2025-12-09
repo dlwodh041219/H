@@ -1025,6 +1025,22 @@ function drawFacePanelWithCamera(panelX, panelY, panelW, panelH) {
   pop();
 }
 
+// stage2_avatar.js 안, drawFacePanelWithCamera 옆에 추가
+function drawFaceFullScreen() {
+  if (!video || !faceMeshReady) return;
+  if (video.width === 0 || video.height === 0) return;
+
+  push();
+  // 거울처럼 좌우 반전
+  translate(width, 0);
+  scale(-1, 1);
+
+  image(video, 0, 0, width, height);
+  drawEmojiFace();   // ★ 여기서 선택된 눈/코/입/헤어/악세/안경까지 모두 얼굴에 붙음
+
+  pop();
+}
+
 // FaceMesh 기반으로 선택된 PNG 파츠를 한 얼굴처럼 코 기준으로 붙이기
 function drawEmojiFace() {
   if (!faces || faces.length === 0) {

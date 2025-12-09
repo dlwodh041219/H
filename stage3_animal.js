@@ -1,4 +1,4 @@
-let animalVideo;
+// ====== 전역 ======
 let animalBodyPose;
 let animalPoses = [];
 let animalCurrentPose = null;
@@ -40,22 +40,30 @@ let animalSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
 let animalBackBtn = { x: 0, y: 0, w: 0, h: 0 };
 let animalGoToQRTriggered = false;
 
-let animalLastSkipTime = 0;         
+let animalLastSkipTime = 0;
 let ANIMAL_SKIP_COOLDOWN = 800;
 
 // ================== 초기화 (메인에서 호출) ==================
 function initAnimalGame() {
 
-  // 카메라
-  animalVideo = createCapture(VIDEO);
-  animalVideo.size(640, 480);
-  animalVideo.hide();
+  // ★ 카메라는 stage2_avatar.js 의 전역 video를 재사용
+  //    (setup()에서 initFaceMesh()가 이미 video를 만들어놨다고 가정)
+  if (!video) {
+    // 혹시 모를 안전장치 (없으면 만들어줌)
+    video = createCapture(VIDEO);
+    video.size(640, 480);
+    video.hide();
+  }
 
-  // BodyPose (MoveNet, 좌우반전)
-  animalBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
-    console.log("Animal BodyPose ready");
-    animalBodyPose.detectStart(animalVideo, animalGotPoses);
-  });
+  // BodyPose (MoveNet, 좌우반전)  ★ detectStart에 video 사용
+  animalBodyPose = ml5.bodyPose(
+    "MoveNet",
+    { flipped: true },
+    () => {
+      console.log("Animal BodyPose ready");
+      animalBodyPose.detectStart(video, animalGotPoses);  // ★ animalVideo → video
+    }
+  );
 
   // Handsfree
   if (!animalHandsfree) {
@@ -141,15 +149,10 @@ function animalUpdateBodyHeights() {
 function drawAnimalGame() {
   background(255);
 
-  if (animalVideo) {
-    // 영상도 좌우반전 (BodyPose flipped:true와 일치)
-    push();
-    translate(width, 0);
-    scale(-1, 1);
-    image(animalVideo, 0, 0, width, height);
-    pop();
-  }
+  // ★ 캠 + 이모지 아바타 풀스크린 (stage2_avatar.js의 함수)
+  drawFaceFullScreen();
 
+  // 이하 로직은 그대로 유지 (포즈/단계 판정)
   if (animalCurrentStep === 1) {
     animalDrawKeypoints();
     animalStepDone = animalDetectOpenArms();
@@ -191,6 +194,7 @@ function drawAnimalGame() {
     }
   }
 }
+
 
 // ================== 1단계: 안아주기 (양팔 크게 벌리고 3초 유지) ==================
 function animalDetectOpenArms() {

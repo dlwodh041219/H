@@ -1,4 +1,4 @@
-let houseVideo;
+// let houseVideo;   // ★ 전역 video를 쓸 거라 필요 없음
 let houseBodyPose;
 let housePoses = [];
 let houseCurrentPose = null;
@@ -45,15 +45,17 @@ let houseSkipBtn = { x: 0, y: 0, w: 0, h: 0 };
 let houseBackBtn = { x: 0, y: 0, w: 0, h: 0 };
 let houseGoToQRTriggered = false;
 
-let houseLastSkipTime = 0;          // ★ 추가
+let houseLastSkipTime = 0;
 let HOUSE_SKIP_COOLDOWN = 800;
 
-// 초기화 (메인에서 phase=3 진입할 때 호출)
+// ================= 초기화 (phase=3 && selectedGame==="house" 진입 시 호출) =================
 function initHouseGame() {
-  // 카메라
-  houseVideo = createCapture(VIDEO)
-  houseVideo.size(640, 480);
-  houseVideo.hide();
+  // ★ 카메라: stage2_avatar.js에서 쓰는 전역 video 재사용
+  if (!video) {
+    video = createCapture(VIDEO);
+    video.size(640, 480);
+    video.hide();
+  }
 
   // 상태 초기화
   houseStep = 1;
@@ -87,10 +89,10 @@ function initHouseGame() {
   houseDoneTime = null;
   houseGoToQRTriggered = false;
 
-  // BodyPose 로드 & 시작
+  // ★ BodyPose 로드 & 시작 (공용 video 사용)
   houseBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
     console.log("House BodyPose ready");
-    houseBodyPose.detectStart(houseVideo, gotHousePoses);
+    houseBodyPose.detectStart(video, gotHousePoses);   // ★ houseVideo → video
   });
 }
 
@@ -101,7 +103,7 @@ function gotHousePoses(results) {
 
   if (houseCurrentPose) {
     updateHouseBodyHeights();
-    markActivity();    // 🔹 몸이 보이면 활동
+    markActivity();    // 몸이 보이면 활동 기록
   }
 }
 
@@ -144,18 +146,14 @@ function updateHouseBodyHeights() {
   if (ls && rs) houseChestY = (ls.y + rs.y) / 2;
 }
 
-// -------------------- 메인 draw (메인 sketch에서 phase===3 && selectedGame==="house"일 때 호출) --------------------
+// -------------------- 메인 draw (phase===3 && selectedGame==="house"일 때 호출) --------------------
 function drawHouseGame() {
   background(0);
 
-  if (houseVideo) {
-    push();
-    translate(width, 0);
-    scale(-1, 1);
-    image(houseVideo, 0, 0, width, height);
-    pop();
-  }
+  // ★ 캠 풀스크린 + 이모지 아바타 (stage2_avatar.js에 정의된 함수)
+  drawFaceFullScreen();
 
+  // 포즈 디버깅(원하면 유지)
   if (houseCurrentPose) drawHouseKeypoints();
   
   if (!houseStepDone && houseCurrentPose) {
@@ -167,6 +165,7 @@ function drawHouseGame() {
 
   drawHouseUI();
 }
+
 
 // 1단계: 도끼질
 function houseUpdateAxe() {

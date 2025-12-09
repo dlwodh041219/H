@@ -52,6 +52,8 @@ function setup() {
   handsfree.start();
 
   console.log("ml5 version:", ml5.version);
+
+  initFaceMesh();
 }
 
 // BodyPose 콜백
