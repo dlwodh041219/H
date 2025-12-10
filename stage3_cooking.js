@@ -221,6 +221,8 @@ function drawCookingGame() {
   if (cookStage === 3) stageIndex = 3;
   if (cookStage === 4) stageIndex = 3;
   let img = cookImgs[stageIndex];
+
+  if (cookStageDone && cookStage === 4) return;
   // 🔥 단계별 그림 표시 (캔버스 우측 하단)
   if (cookStage >= 0) {
     // let img = cookImgs[cookStage];

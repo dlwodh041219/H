@@ -186,10 +186,10 @@ function drawHouseGame() {
 }
 
 function drawHouseStepImage() {
+  
+
+  if (houseStepDone) return;
   let stepIndex = houseStep;
-
-  if (houseStepDone) stepIndex = 4;
-
   let img = houseImgs[stepIndex];
   if (!img) return;
 
