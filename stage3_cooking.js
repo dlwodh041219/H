@@ -3,6 +3,8 @@ let cookBodyPose;
 let cookPoses = [];
 let cookCurrentPose = null;
 
+let cookImgs = [];
+
 // 기준선
 let cookHeadY = null;
 let cookChestY = null;
@@ -81,6 +83,12 @@ function initCookingGame() {
 
   // 상태 리셋
   cookResetState();
+
+  // 이미지 미리 로드
+  cookImgs[0] = loadImage("cook1.png");
+  cookImgs[1] = loadImage("cook2.png");
+  cookImgs[2] = loadImage("cook3.png");
+  cookImgs[3] = loadImage("cook4.png");
 }
 
 function cookResetState() {
@@ -190,7 +198,7 @@ function drawCookingGame() {
   // 4단계: Face tracking (입 벌리기)만 별도로 처리
   if (cookStage === 3) {
     cookUpdateTaste();
-    return;
+
   }
 
   // 1~3단계: BodyPose
@@ -207,6 +215,31 @@ function drawCookingGame() {
   // 디버깅용 키포인트 표시
   if (cookCurrentPose && cookStage !== 3 && cookStage !== 4) {
     cookDrawKeypoints();
+  }
+
+  let stageIndex = cookStage;
+  if (cookStage === 3) stageIndex = 3;
+  if (cookStage === 4) stageIndex = 3;
+  let img = cookImgs[stageIndex];
+  // 🔥 단계별 그림 표시 (캔버스 우측 하단)
+  if (cookStage >= 0) {
+    // let img = cookImgs[cookStage];
+    if (img) {
+      // 단계별 이미지 크기 조정
+      let w = 150;
+      let h = (img.height / img.width) * w;
+      let x = width - w - 20;
+      let y = height - h - 20;
+
+      fill(255);
+      noStroke();
+      rect(x-10,y-10,w+20,h+20,12);
+      image(img, x,y,w,h);
+      
+      fill(0);
+      textAlign(CENTER,CENTER)
+      text('진행 상황',x+75,y)
+    }
   }
 }
 
