@@ -96,6 +96,11 @@ function initHouseGame() {
     console.log("House BodyPose ready");
     houseBodyPose.detectStart(video, gotHousePoses);   // ★ houseVideo → video
   });
+
+  houseImgs[1] = loadImage("house1.png")
+  houseImgs[2] = loadImage("house2.png")
+  houseImgs[3] = loadImage("house3.png")
+  houseImgs[4] = loadImage("house4.png")
 }
 
 // BodyPose 콜백
@@ -108,10 +113,6 @@ function gotHousePoses(results) {
     markActivity();    // 몸이 보이면 활동 기록
   }
 
-  houseImgs[1] = loadImage("house1.png")
-  houseImgs[2] = loadImage("house2.png")
-  houseImgs[3] = loadImage("house3.png")
-  houseImgs[4] = loadImage("house4.png")
 }
 
 // 특정 관절 가져오기 + 스무딩
@@ -211,7 +212,8 @@ function drawHouseStepImage() {
   // 텍스트
   fill(0);
   textAlign(CENTER, CENTER);
-  text("진행 상황", x + 73, y - 15);
+  textSize(12)
+  text("진행 상황", x + 73, y);
   pop();
 }
 

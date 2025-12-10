@@ -43,6 +43,8 @@ let animalGoToQRTriggered = false;
 let animalLastSkipTime = 0;
 let ANIMAL_SKIP_COOLDOWN = 800;
 
+let puppyImgs = [];
+
 // ================== 초기화 (메인에서 호출) ==================
 function initAnimalGame() {
 
@@ -93,6 +95,12 @@ function initAnimalGame() {
 
   animalDoneTime = null;
   animalGoToQRTriggered = false;
+
+  puppyImgs[0] = loadImage('puppy1.png');
+  puppyImgs[1] = loadImage('puppy2.png');
+  puppyImgs[2] = loadImage('puppy3.png');
+  puppyImgs[3] = loadImage('puppy4.png');
+
 }
 
 // BodyPose 콜백
@@ -174,6 +182,11 @@ function drawAnimalGame() {
 
   animalDrawUI();
 
+  push();
+  resetMatrix();
+  drawAnimalStepImage();
+  pop();
+
   // 단계 완료 시 다음 단계로
   if (animalStepDone) {
     animalCurrentStep++;
@@ -194,6 +207,37 @@ function drawAnimalGame() {
     }
   }
 }
+
+// ====================== 단계별 강아지 이미지 표시 ======================
+function drawAnimalStepImage() {
+  // 단계: 1~4만 그림
+  let index = animalCurrentStep - 1;
+  if (index < 0 || index > 3) return;
+
+  let img = puppyImgs[index];
+  if (!img) return; // 이미지 아직 로드 안 됐으면 스킵
+
+  let w = 150;
+  let h = (img.height / img.width) * w;
+
+  let x = width - w - 20;    // 우측 하단
+  let y = height - h - 20;
+
+  // 흰 배경 박스
+  fill(255);
+  noStroke();
+  rect(x - 10, y - 10, w + 20, h + 20, 12);
+
+  // 이미지 출력
+  image(img, x, y, w, h);
+
+  // 제목
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(12)
+  text("진행 상황", x + 73, y);
+}
+
 
 
 // ================== 1단계: 안아주기 (양팔 크게 벌리고 3초 유지) ==================

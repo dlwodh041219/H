@@ -238,6 +238,7 @@ function drawCookingGame() {
       
       fill(0);
       textAlign(CENTER,CENTER)
+      textSize(12)
       text('진행 상황',x+75,y)
     }
   }
