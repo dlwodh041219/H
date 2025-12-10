@@ -8,11 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/addons/p5.sound.min.js"></script>
 
-  <!-- ml5.js v1.x -->
+  <!-- ml5.js -->
   <script src="https://unpkg.com/ml5@1.2.1/dist/ml5.min.js"></script>
 
   <!-- clmtrackr -->
-<script src="https://unpkg.com/clmtrackr@1.1.2/build/clmtrackr.min.js"></script>
+  <script src="https://unpkg.com/clmtrackr@1.1.2/build/clmtrackr.min.js"></script>
 
   <!-- Handsfree -->
   <link rel="stylesheet"
@@ -26,17 +26,27 @@
       margin: 0;
       background-color: rgb(215, 240, 249);
       color: white;
-    }
-    canvas {
-      display: block;
-      margin: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
 
-    .handsfree-debugger,
-    .handsfree-debugger-root,
-    .handsfree-debugger-plugin,
-    .handsfree-dev-meta {
-      display: none !important;
+    .main-wrapper {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 40px;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .side-image img {
+      width: 280px;
+      height: auto;
+      border-radius: 10px;
     }
     .container {
       display: flex;
@@ -53,14 +63,26 @@
 
   <script src="main_sketch.js"></script>
 
-  <!-- 2단계 아바타 선택 스케치 -->
+  <div class="main-wrapper">
+    <main></main>
+
+    <!-- 🔥 요리 단계 이미지 오른쪽에 표시되는 영역 -->
+    <div class="side-image">
+      <img id="cook-stage-img" src="cook1.png" alt="요리단계 이미지">
+    </div>
+  </div>
+
+  <script src="main_sketch.js"></script>
+
+  <!-- 아바타 선택 -->
   <script src="stage2_avatar.js"></script>
 
-  <!-- 3단계 게임 모듈-->
+  <!-- 게임 모듈 -->
   <script src="stage3_animal.js"></script>
   <script src="stage3_cooking.js"></script>
   <script src="stage3_house.js"></script>
 
+<<<<<<< Updated upstream
   <!-- 4단계 QR 페이지 모듈 -->
   <script src="stage4_QR.js"></script>
 
@@ -68,3 +90,11 @@
 
 </body>
 </html>
+=======
+  <!-- QR 저장 -->
+  <script src="stage4_QR.js"></script>
+
+</body>
+</html>
+
+>>>>>>> Stashed changes
