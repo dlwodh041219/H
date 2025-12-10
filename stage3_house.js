@@ -48,6 +48,8 @@ let houseGoToQRTriggered = false;
 let houseLastSkipTime = 0;
 let HOUSE_SKIP_COOLDOWN = 800;
 
+let houseImgs = [];
+
 // ================= 초기화 (phase=3 && selectedGame==="house" 진입 시 호출) =================
 function initHouseGame() {
   // ★ 카메라: stage2_avatar.js에서 쓰는 전역 video 재사용
@@ -105,6 +107,11 @@ function gotHousePoses(results) {
     updateHouseBodyHeights();
     markActivity();    // 몸이 보이면 활동 기록
   }
+
+  houseImgs[1] = loadImage("house1.png")
+  houseImgs[2] = loadImage("house2.png")
+  houseImgs[3] = loadImage("house3.png")
+  houseImgs[4] = loadImage("house4.png")
 }
 
 // 특정 관절 가져오기 + 스무딩
@@ -151,9 +158,12 @@ function drawHouseGame() {
   background(0);
 
   // ★ 캠 풀스크린 + 이모지 아바타 (stage2_avatar.js에 정의된 함수)
+  push();
   drawFaceFullScreen();
+  pop();
 
   // 포즈 디버깅(원하면 유지)
+  push();
   if (houseCurrentPose) drawHouseKeypoints();
   
   if (!houseStepDone && houseCurrentPose) {
@@ -162,9 +172,49 @@ function drawHouseGame() {
     else if (houseStep === 3) houseUpdateHammer();
     else if (houseStep === 4) houseUpdateWave();
   }
+  pop();
 
+  push();
   drawHouseUI();
+  pop();
+
+  push();
+  resetMatrix();
+  drawHouseStepImage();
+  pop();
 }
+
+function drawHouseStepImage() {
+  let stepIndex = houseStep;
+
+  if (houseStepDone) stepIndex = 4;
+
+  let img = houseImgs[stepIndex];
+  if (!img) return;
+
+  let w = 150;
+  let h = (img.height / img.width) * w;
+  let x = width - w - 20;
+  let y = height - h - 20;
+
+  push();
+  // 배경 박스
+  fill(255);
+  noStroke();
+  rect(x - 10, y - 10, w + 20, h + 20, 12);
+
+  // 이미지
+  push();
+  image(img, x, y, w, h);
+  pop();
+
+  // 텍스트
+  fill(0);
+  textAlign(CENTER, CENTER);
+  text("진행 상황", x + 73, y - 15);
+  pop();
+}
+
 
 
 // 1단계: 도끼질
@@ -339,6 +389,7 @@ function houseUpdateWave() {
 
 // 디버그용 키포인트
 function drawHouseKeypoints() {
+  push();
   noStroke();
 
   let names = [
@@ -364,6 +415,7 @@ function drawHouseKeypoints() {
     fill(r, g, 0);
     ellipse(x, y, 10, 10);
   }
+  pop();
 }
 
 function mousePressedHouseGame() {
@@ -498,6 +550,7 @@ function resetHouseStep4() {
 
 // ================== UI ==================
 function drawHouseUI() {
+  push();
   fill(0, 180);
   rect(0, 0, width, 60);
 
@@ -568,6 +621,8 @@ function drawHouseUI() {
     pop();
 
     return;
+
+    pop();
   }
 
   // ✅ 진행 중 단계 텍스트
