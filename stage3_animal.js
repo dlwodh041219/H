@@ -297,15 +297,7 @@ function drawAnimalGame() {
       animalLastGuideSwitch = millis();
     }
 
-  // showAnimalGuide = true;
-  // animalGuideStartTime = millis();
 
-  // animalGuideIndex = 0;
-  // animalLastGuideSwitch = millis();
-
-  // // 가이드 이미지 표시 초기화
-  // showAnimalGuide = true;
-  // animalGuideStartTime = millis();
 
     if (animalCurrentStep === 2) {
       animalFood.visible = true;
