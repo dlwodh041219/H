@@ -27,6 +27,7 @@ function preload() {
   fontStart    = loadFont("Recipekorea.ttf");
   fontTemplate = loadFont("komi.otf");
   img          = loadImage("pen.jpeg");
+  loadAnimalGuideImgs();
   //qrImg        = loadImage("qr_sample.png");
 }
 
