@@ -5,8 +5,7 @@ let animalCurrentPose = null;
 let animalHandsfree;
 let animalGuideImgs = {};   // ⭐ 단계별 가이드 이미지 저장용
 let animalGuideLoaded = false; // 로딩 완료 여부
-
-
+let animalGuideEndTime = null;
 
 // 단계
 let animalCurrentStep = 1;
@@ -17,7 +16,7 @@ let showAnimalGuide = true;
 let animalGuideStartTime = 0;
 let animalGuideIndex = 0;        // 현재 가이드 이미지 번호
 let animalLastGuideSwitch = 0;   // 마지막으로 이미지 바꾼 시각
-let ANIMAL_GUIDE_INTERVAL = 2500; // 이미지 전환 간격(2.5초)
+let ANIMAL_GUIDE_INTERVAL = 2500; // 이미지 전환 간격
 
 
 // 기준선
@@ -57,28 +56,40 @@ let ANIMAL_SKIP_COOLDOWN = 800;
 
 let puppyImgs = [];
 
+let guideImagesReady = { 1:false, 2:false, 3:false, 4:false };
+
 // ================== 동물 가이드 이미지 로더 ==================
 function loadAnimalGuideImgs() {
   animalGuideImgs = {
-    1: [
-      loadImage('Hug.png')
-    ],
+    1: [ loadImage('Hug.png', () => checkGuideLoaded(1)) ],
     2: [
-      loadImage('Feed1.png'),
-      loadImage('Feed2.png')
+      loadImage('Feed1.png', () => checkGuideLoaded(2)),
+      loadImage('Feed2.png', () => checkGuideLoaded(2))
     ],
     3: [
-      loadImage('tap1.png'),
-      loadImage('tap2.png')
+      loadImage('tap1.png', () => checkGuideLoaded(3)),
+      loadImage('tap2.png', () => checkGuideLoaded(3))
     ],
     4: [
-      loadImage('Play1.png'),
-      loadImage('Play2.png')
-    ],
+      loadImage('Play1.png', () => checkGuideLoaded(4)),
+      loadImage('Play2.png', () => checkGuideLoaded(4))
+    ]
   };
 
   animalGuideLoaded = true;
 }
+
+// ✅ 각 단계 이미지가 모두 로드됐는지 확인 후 ready 설정
+function checkGuideLoaded(step) {
+  let group = animalGuideImgs[step];
+  if (!group) return;
+
+  // 모든 이미지가 width > 0이면 ready
+  let allLoaded = group.every(img => img.width > 0);
+  guideImagesReady[step] = allLoaded;
+}
+
+
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -189,6 +200,32 @@ function animalUpdateBodyHeights() {
   if (ls && rs) animalChestY = (ls.y + rs.y) / 2;
 }
 
+function nextAnimalStep() {
+  animalCurrentStep++;
+  animalStepDone = false;
+
+  if (animalCurrentStep >= 1 && animalCurrentStep <= 4) {
+    showAnimalGuide = true;
+    animalGuideIndex = 0;
+    animalLastGuideSwitch = millis();
+    animalGuideEndTime = null;
+  }
+
+  // 단계별 초기화
+  if (animalCurrentStep === 2) {
+    animalFood.visible = true;
+    animalBowl.visible = true;
+  } else if (animalCurrentStep === 3) {
+    animalWaveState = "DOWN";
+    animalWaveCount = 0;
+  } else if (animalCurrentStep === 4) {
+    animalSwingState = "WAIT_UP";
+    animalSwingCount = 0;
+    animalSwingTimer = 0;
+  }
+}
+
+
 
 // ================== 메인 draw에서 호출 ==================
 function drawAnimalGame() {
@@ -197,14 +234,6 @@ function drawAnimalGame() {
   // ★ 캠 + 이모지 아바타 풀스크린 (stage2_avatar.js의 함수)
   drawFaceFullScreen();
 
-  // ⭐ 가이드 이미지 먼저 그리기
-  if (animalGuideLoaded) {
-    drawAnimalGuide();
-    if (showAnimalGuide) {
-      // 가이드 나오는 동안은 아래 단계 로직은 잠깐 멈춤
-      return;
-    }
-  }
 
   // 이하 로직은 그대로 유지 (포즈/단계 판정)
   if (animalCurrentStep === 1) {
@@ -237,6 +266,7 @@ function drawAnimalGame() {
   if (animalStepDone) {
     animalCurrentStep++;
     animalStepDone = false;
+    nextAnimalStep();
 
     // ⭐ 새 단계 가이드 다시 켜기 (단, 1~4단계까지만)
     if (animalCurrentStep >= 1 && animalCurrentStep <= 4) {
@@ -269,13 +299,27 @@ function drawAnimalGame() {
       animalSwingTimer = 0;
     }
   }
+
+      // ⭐ 가이드 이미지 먼저 그리기
+  if (animalGuideLoaded) {
+    drawAnimalGuide();
+    if (showAnimalGuide) {
+      // 가이드 나오는 동안은 아래 단계 로직은 잠깐 멈춤
+      return;
+    }
+  }
+
 }
 
+// 단계별 로드 체크
+function checkStep2() { guideImagesReady[2] = animalGuideImgs[2].every(img => img.width > 0); }
+function checkStep3() { guideImagesReady[3] = animalGuideImgs[3].every(img => img.width > 0); }
+function checkStep4() { guideImagesReady[4] = animalGuideImgs[4].every(img => img.width > 0); }
 
 
 //단계별 가이드 이미지 표시
 function drawAnimalGuide() {
-  if (!showAnimalGuide) return;
+  if (!showAnimalGuide || !animalGuideLoaded) return;
 
   // 현재 단계의 이미지 배열 가져오기
   let group = animalGuideImgs[animalCurrentStep];
@@ -283,19 +327,20 @@ function drawAnimalGuide() {
     showAnimalGuide = false;
     return;
   }
+  // 이미지 로드 완료 여부 확인
+  if (!guideImagesReady[animalCurrentStep]) return;
 
-  // 현재 표시할 이미지
   let img = group[animalGuideIndex];
   if (!img) return;
 
-  // 화면 가운데 표시
-  let w = 350;
+  let w = width;
   let h = (img.height / img.width) * w;
+
 
   push();
   resetMatrix();
   imageMode(CENTER);
-  image(img, width / 2, height / 2, w, h);
+  image(img, width/2, height/2, w, h);
   pop();
 
   // 2.5초마다 다음 이미지로 자동 전환
@@ -303,10 +348,19 @@ function drawAnimalGuide() {
     animalGuideIndex++;
     animalLastGuideSwitch = millis();
 
-    // 배열 끝이면 가이드 종료
-    if (animalGuideIndex >= group.length) {
-      showAnimalGuide = false;
-    }
+ if (animalGuideIndex >= group.length) {
+  if (!animalGuideEndTime) animalGuideEndTime = millis();
+
+  // 마지막 이미지도 3초 유지
+  if (millis() - animalGuideEndTime > 3000) {
+    showAnimalGuide = false;
+    animalGuideEndTime = null;
+    animalGuideIndex = 0;
+  }else {
+        // 마지막 이미지 유지
+        animalGuideIndex = group.length - 1;
+}
+}
   }
 }
 
