@@ -16,7 +16,7 @@ let showAnimalGuide = true;
 let animalGuideStartTime = 0;
 let animalGuideIndex = 0;        // 현재 가이드 이미지 번호
 let animalLastGuideSwitch = 0;   // 마지막으로 이미지 바꾼 시각
-let ANIMAL_GUIDE_INTERVAL = 2500; // 이미지 전환 간격
+let ANIMAL_GUIDE_INTERVAL = 1500; // 이미지 전환 간격
 
 
 // 기준선
@@ -61,23 +61,47 @@ let guideImagesReady = { 1:false, 2:false, 3:false, 4:false };
 // ================== 동물 가이드 이미지 로더 ==================
 function loadAnimalGuideImgs() {
   animalGuideImgs = {
-    1: [ loadImage('Hug.png', () => checkGuideLoaded(1)) ],
-    2: [
-      loadImage('Feed1.png', () => checkGuideLoaded(2)),
-      loadImage('Feed2.png', () => checkGuideLoaded(2))
-    ],
-    3: [
-      loadImage('tap1.png', () => checkGuideLoaded(3)),
-      loadImage('tap2.png', () => checkGuideLoaded(3))
-    ],
-    4: [
-      loadImage('Play1.png', () => checkGuideLoaded(4)),
-      loadImage('Play2.png', () => checkGuideLoaded(4))
-    ]
+    1: ['Hug.png'],
+    2: ['Feed1.png', 'Feed2.png'],
+    3: ['tap1.png','tap2.png'],
+    4: ['Play1.png','Play2.png']
   };
 
-  animalGuideLoaded = true;
+  // 단계별 로드 상태 초기화
+  guideImagesReady = {1:false,2:false,3:false,4:false};
+
+  let steps = Object.keys(animalGuideImgs);
+  let totalSteps = steps.length;
+  let stepsLoadedCount = 0;
+
+  for (let step of steps) {
+    let paths = animalGuideImgs[step];
+    let loadedImgs = [];
+    let loadedCount = 0;
+
+    for (let i = 0; i < paths.length; i++) {
+      loadImage(paths[i], (img) => {
+        loadedImgs[i] = img;
+        loadedCount++;
+
+        if (loadedCount === paths.length) {
+          // 해당 단계 모든 이미지 로드 완료
+          animalGuideImgs[step] = loadedImgs;
+          guideImagesReady[step] = true;
+          console.log(`Guide images for step ${step} loaded`);
+
+          // 전체 단계 로드 완료 체크
+          stepsLoadedCount++;
+          if (stepsLoadedCount === totalSteps) {
+            animalGuideLoaded = true;
+            console.log("✅ All guide images loaded!");
+          }
+        }
+      });
+    }
+  }
 }
+
 
 // ✅ 각 단계 이미지가 모두 로드됐는지 확인 후 ready 설정
 function checkGuideLoaded(step) {
@@ -147,7 +171,6 @@ function initAnimalGame() {
   puppyImgs[1] = loadImage('puppy2.png');
   puppyImgs[2] = loadImage('puppy3.png');
   puppyImgs[3] = loadImage('puppy4.png');
-
 
 }
 
@@ -266,7 +289,6 @@ function drawAnimalGame() {
   if (animalStepDone) {
     animalCurrentStep++;
     animalStepDone = false;
-    nextAnimalStep();
 
     // ⭐ 새 단계 가이드 다시 켜기 (단, 1~4단계까지만)
     if (animalCurrentStep >= 1 && animalCurrentStep <= 4) {
@@ -303,13 +325,10 @@ function drawAnimalGame() {
       // ⭐ 가이드 이미지 먼저 그리기
   if (animalGuideLoaded) {
     drawAnimalGuide();
-    if (showAnimalGuide) {
-      // 가이드 나오는 동안은 아래 단계 로직은 잠깐 멈춤
-      return;
     }
   }
 
-}
+
 
 // 단계별 로드 체크
 function checkStep2() { guideImagesReady[2] = animalGuideImgs[2].every(img => img.width > 0); }
@@ -333,14 +352,14 @@ function drawAnimalGuide() {
   let img = group[animalGuideIndex];
   if (!img) return;
 
-  let w = width;
+  let w = width+110;
   let h = (img.height / img.width) * w;
 
 
   push();
   resetMatrix();
   imageMode(CENTER);
-  image(img, width/2, height/2, w, h);
+  image(img, width/2, height/2+30, w, h);
   pop();
 
   // 2.5초마다 다음 이미지로 자동 전환
@@ -352,7 +371,7 @@ function drawAnimalGuide() {
   if (!animalGuideEndTime) animalGuideEndTime = millis();
 
   // 마지막 이미지도 3초 유지
-  if (millis() - animalGuideEndTime > 3000) {
+  if (millis() - animalGuideEndTime > 1500) {
     showAnimalGuide = false;
     animalGuideEndTime = null;
     animalGuideIndex = 0;
