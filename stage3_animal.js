@@ -3,8 +3,6 @@ let animalBodyPose;
 let animalPoses = [];
 let animalCurrentPose = null;
 let animalHandsfree;
-let animalGuideImgs = {};   // ⭐ 단계별 가이드 이미지 저장용
-let animalGuideLoaded = false; // 로딩 완료 여부
 
 
 // 단계
@@ -230,11 +228,6 @@ function drawAnimalGame() {
     animalCurrentStep++;
     animalStepDone = false;
 
-     if (animalCurrentStep >= 1 && animalCurrentStep <= 4) {
-      showAnimalGuide = true;
-      animalGuideIndex = 0;
-      animalLastGuideSwitch = millis();
-    }
 
   // showAnimalGuide = true;
   // animalGuideStartTime = millis();
@@ -263,81 +256,43 @@ function drawAnimalGame() {
 }
 
 
-// ================== 동물 가이드 이미지 로더 ==================
-function loadAnimalGuideImgs() {
-  animalGuideImgs = {
-    1: [
-      loadImage('Hug.png')
-    ],
-    2: [
-      loadImage('Feed1.png'),
-      loadImage('Feed2.png')
-    ],
-    3: [
-      loadImage('tap1.png'),
-      loadImage('tap2.png')
-    ],
-    4: [
-      loadImage('Play1.png'),
-      loadImage('Play2.png')
-    ],
-  };
 
-  animalGuideLoaded = true;
-}
+// //단계별 가이드 이미지 표시
+// function drawAnimalGuide() {
+//   if (!showAnimalGuide) return;
 
+//   // 현재 단계의 이미지 배열 가져오기
+//   let group = animalGuideImgs[animalCurrentStep];
+//   if (!group || group.length === 0) {
+//     showAnimalGuide = false;
+//     return;
+//   }
 
-function drawAnimalGame() {
-  background(255);
+//   // 현재 표시할 이미지
+//   let img = group[animalGuideIndex];
+//   if (!img) return;
 
-  // ★ 캠 + 이모지 아바타 풀스크린 (stage2_avatar.js의 함수)
-  drawFaceFullScreen();
+//   // 화면 가운데 표시
+//   let w = 350;
+//   let h = (img.height / img.width) * w;
 
-  // ⭐ 가이드 이미지 먼저 그리기
-  if (animalGuideLoaded) {
-    drawAnimalGuide();
-    if (showAnimalGuide) {
-      // 가이드 나오는 동안은 아래 단계 로직은 잠깐 멈춤
-      return;
-    }
-  }
-}
-//단계별 가이드 이미지 표시
-function drawAnimalGuide() {
-  if (!showAnimalGuide) return;
+//   push();
+//   resetMatrix();
+//   imageMode(CENTER);
+//   image(img, width / 2, height / 2, w, h);
+//   pop();
 
-  // 현재 단계의 이미지 배열 가져오기
-  let group = animalGuideImgs[animalCurrentStep];
-  if (!group || group.length === 0) {
-    showAnimalGuide = false;
-    return;
-  }
+//   // 2.5초마다 다음 이미지로 자동 전환
+//   if (millis() - animalLastGuideSwitch > ANIMAL_GUIDE_INTERVAL) {
+//     animalGuideIndex++;
+//     animalLastGuideSwitch = millis();
 
-  // 현재 표시할 이미지
-  let img = group[animalGuideIndex];
-  if (!img) return;
-
-  // 화면 가운데 표시
-  let w = 350;
-  let h = (img.height / img.width) * w;
-
-  push();
-  resetMatrix();
-  imageMode(CENTER);
-  image(img, width / 2, height / 2, w, h);
-  pop();
-
-  // 2.5초마다 다음 이미지로 자동 전환
-  if (millis() - animalLastGuideSwitch > ANIMAL_GUIDE_INTERVAL) {
-    animalGuideIndex++;
-    animalLastGuideSwitch = millis();
-
-    // 배열 끝이면 가이드 종료
-    if (animalGuideIndex >= group.length) {
-      showAnimalGuide = false;
-    }
-  }
-}
+//     // 배열 끝이면 가이드 종료
+//     if (animalGuideIndex >= group.length) {
+//       showAnimalGuide = false;
+//     }
+//   }
+// }
 
 
 
