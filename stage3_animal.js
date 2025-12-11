@@ -8,6 +8,14 @@ let animalHandsfree;
 let animalCurrentStep = 1;
 let animalStepDone = false;
 
+//가이드 이미지
+let showAnimalGuide = true;
+let animalGuideStartTime = 0;
+let animalGuideIndex = 0;        // 현재 가이드 이미지 번호
+let animalLastGuideSwitch = 0;   // 마지막으로 이미지 바꾼 시각
+let ANIMAL_GUIDE_INTERVAL = 2500; // 이미지 전환 간격(2.5초)
+
+
 // 기준선
 let animalHeadY, animalChestY;
 
@@ -44,6 +52,28 @@ let animalLastSkipTime = 0;
 let ANIMAL_SKIP_COOLDOWN = 800;
 
 let puppyImgs = [];
+// let animalGuideImgs = {}
+
+// function preload(){
+//   animalGuideImgs = {
+//   1: [ 
+//     loadImage('Hug.png') 
+//   ],
+//   2: [ 
+//     loadImage('Feed1.png'), 
+//     loadImage('Feed2.png') 
+//   ],
+//   3: [ 
+//     loadImage('tap1.png'), 
+//     loadImage('tap2.png') 
+//   ],
+//   4: [ 
+//     loadImage('Play1.png'), 
+//     loadImage('Play2.png') 
+//   ],
+// };
+// }
+
 
 // ================== 초기화 (메인에서 호출) ==================
 function initAnimalGame() {
@@ -100,6 +130,7 @@ function initAnimalGame() {
   puppyImgs[1] = loadImage('puppy2.png');
   puppyImgs[2] = loadImage('puppy3.png');
   puppyImgs[3] = loadImage('puppy4.png');
+
 
 }
 
@@ -160,6 +191,10 @@ function drawAnimalGame() {
   // ★ 캠 + 이모지 아바타 풀스크린 (stage2_avatar.js의 함수)
   drawFaceFullScreen();
 
+  // //가이드 이미지
+  // drawAnimalGuide();
+  // if(showAnimalGuide) return;
+
   // 이하 로직은 그대로 유지 (포즈/단계 판정)
   if (animalCurrentStep === 1) {
     animalDrawKeypoints();
@@ -192,6 +227,16 @@ function drawAnimalGame() {
     animalCurrentStep++;
     animalStepDone = false;
 
+  // showAnimalGuide = true;
+  // animalGuideStartTime = millis();
+
+  // animalGuideIndex = 0;
+  // animalLastGuideSwitch = millis();
+
+  // // 가이드 이미지 표시 초기화
+  // showAnimalGuide = true;
+  // animalGuideStartTime = millis();
+
     if (animalCurrentStep === 2) {
       animalFood.visible = true;
       animalBowl.visible = true;
@@ -207,6 +252,45 @@ function drawAnimalGame() {
     }
   }
 }
+
+// //단계별 가이드 이미지 표시
+// function drawAnimalGuide() {
+//   if (!showAnimalGuide) return;
+
+//   // 현재 단계의 이미지 배열 가져오기
+//   let group = animalGuideImgs[animalCurrentStep];
+//   if (!group || group.length === 0) {
+//     showAnimalGuide = false;
+//     return;
+//   }
+
+//   // 현재 표시할 이미지
+//   let img = group[animalGuideIndex];
+//   if (!img) return;
+
+//   // 화면 가운데 표시
+//   let w = 350;
+//   let h = (img.height / img.width) * w;
+
+//   push();
+//   resetMatrix();
+//   imageMode(CENTER);
+//   image(img, width / 2, height / 2, w, h);
+//   pop();
+
+//   // 2.5초마다 다음 이미지로 자동 전환
+//   if (millis() - animalLastGuideSwitch > ANIMAL_GUIDE_INTERVAL) {
+//     animalGuideIndex++;
+//     animalLastGuideSwitch = millis();
+
+//     // 배열 끝이면 가이드 종료
+//     if (animalGuideIndex >= group.length) {
+//       showAnimalGuide = false;
+//     }
+//   }
+// }
+
+
 
 // ====================== 단계별 강아지 이미지 표시 ======================
 function drawAnimalStepImage() {
