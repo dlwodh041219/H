@@ -284,6 +284,7 @@ function drawAnimalGame() {
   resetMatrix();
   drawAnimalStepImage();
   pop();
+  
 
   // 단계 완료 시 다음 단계로
   if (animalStepDone) {
