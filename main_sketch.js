@@ -93,7 +93,7 @@ function draw() {
   textSize(45);
   noStroke();
   fill(0);
-  text("👆", mouseX, mouseY);
+  text("👆", mouseX, mouseY+25);
   pop();
 
   if (millis() - lastActivityTime > INACTIVITY_LIMIT) {
@@ -108,13 +108,13 @@ function draw() {
 function drawStartPage() {
   background(215, 240, 249);
 
-  //"Emoji-Coreo"
+  //"Emoji-Choreo"
   push();
   textFont(fontTemplate);
   fill(0);
   noStroke();
   textSize(15);
-  text("Emoji-Coreo", 485, 185);
+  text("Emoji-Choreo", 485, 185);
   pop();
 
   // 체크표시 이미지
