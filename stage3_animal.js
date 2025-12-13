@@ -867,7 +867,7 @@ function animalDrawUI() {
   if (animalCurrentStep === 1)
     desc = "1단계) 안아주기: 양팔을 크게 3초 간 벌리세요!";
   else if (animalCurrentStep === 2)
-    desc = "2단계) 밥 주기: 손으로 당근과 그릇을 차례로 터치하세요!";
+    desc = "2단계) 밥 주기: 오른손으로 당근과 그릇을 차례로 2초 간 터치하세요!";
   else if (animalCurrentStep === 3)
     desc = `3단계) 쓰다듬기: 오른손을 머리 위아래로 3회 움직이세요! (${animalWaveCount}/${ANIMAL_REQUIRED_WAVES})`;
   else if (animalCurrentStep === 4)
@@ -929,6 +929,6 @@ function animalDrawUI() {
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP >", skipCenterX, centerY);
+  text("건너뛰기 >", skipCenterX, centerY);
   pop();
 }

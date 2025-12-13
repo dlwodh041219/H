@@ -797,6 +797,6 @@ function cookDrawStageInfo() {
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP >", skipCenterX, centerY);
+  text("건너뛰기 >", skipCenterX, centerY);
   pop();
 }
