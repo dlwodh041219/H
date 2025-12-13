@@ -282,8 +282,8 @@ function houseUpdateSaw() {
 
   let avgX = (lw.x + rw.x) / 2;
   let center = width / 2;
-  let leftZone = center - 60;
-  let rightZone = center + 60;
+  let leftZone = center - 30;
+  let rightZone = center + 30;
 
   let inLeft = avgX < leftZone;
   let inRight = avgX > rightZone;
@@ -354,14 +354,24 @@ function houseUpdateHammer() {
 
 // 4단계: 인사
 function houseUpdateWave() {
-  let rw = houseGetPart("right_wrist");
-  if (!rw) return;
+  // 오른손(없으면 팔꿈치로 대체 가능하게)
+  let rw = houseGetPart("right_wrist", 0.05);
+  if (!rw) {
+    rw = houseGetPart("right_elbow", 0.05);
+    if (!rw) return;
+  }
 
-  let centerX = width / 2;
-  let leftBorder = centerX - 40;
-  let rightBorder = centerX + 40;
+  // 오른쪽 어깨 기준선
+  let rs = houseGetPart("right_shoulder");
+  if (!rs) return;
 
-  let isLeft = rw.x < leftBorder;
+  let shoulderX = rs.x;
+
+  // 어깨에서 좌/우로 경계(픽셀) 설정: 필요하면 30~70 사이로 조절
+  let leftBorder  = shoulderX - 40;
+  let rightBorder = shoulderX + 40;
+
+  let isLeft  = rw.x < leftBorder;
   let isRight = rw.x > rightBorder;
 
   if (isLeft) houseWaveLeftStreak++;
@@ -388,6 +398,7 @@ function houseUpdateWave() {
     houseStepDone = true;
   }
 }
+
 
 // 디버그용 키포인트
 function drawHouseKeypoints() {

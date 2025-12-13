@@ -422,7 +422,7 @@ function animalDetectOpenArms() {
   let elbowDist = dist(le.x, le.y, re.x, re.y);
 
   let chestTopY = Math.min(ls.y, rs.y);
-  let chestBottomY = chestTopY + shoulderWidth * 1.3;
+  let chestBottomY = chestTopY + shoulderWidth * 1.5;
 
   let wristsAtChestHeight =
     lw.y > chestTopY &&
@@ -430,8 +430,8 @@ function animalDetectOpenArms() {
     rw.y > chestTopY &&
     rw.y < chestBottomY;
 
-  let armsWideEnough = wristDist > shoulderWidth * 2.3;
-  let elbowsWide = elbowDist > shoulderWidth * 1.6;
+  let armsWideEnough = wristDist > shoulderWidth * 1.9;
+  let elbowsWide = elbowDist > shoulderWidth * 1.4;
 
   let postureOK = armsWideEnough && elbowsWide && wristsAtChestHeight;
 
