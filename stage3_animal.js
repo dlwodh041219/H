@@ -2,7 +2,6 @@
 let animalBodyPose;
 let animalPoses = [];
 let animalCurrentPose = null;
-let animalHandsfree;
 let animalGuideImgs = {};   // ⭐ 단계별 가이드 이미지 저장용
 let animalGuideLoaded = false; // 로딩 완료 여부
 let animalGuideEndTime = null;
@@ -31,9 +30,10 @@ let ANIMAL_BASE_MIN_CONF = 0.15;
 let animalHoldStartTime = null;
 let ANIMAL_HOLD_DURATION = 3000; // 3초
 
-// 2단계: 밥주기(Handsfree)
-let animalFood = { x: 500, y: 130, r: 50, visible: true };
-let animalBowl = { x: 320, y: 400, r: 60, visible: true };
+// 2단계: 밥주기
+let animalFeedState = "CARROT"; // "CARROT" -> "BOWL" -> "DONE"
+let animalFeedHoldStart = null;
+let ANIMAL_FEED_HOLD_MS = 2000; // 2초
 
 // 3단계: 쓰다듬기
 let animalWaveState = "DOWN";
@@ -138,14 +138,6 @@ function initAnimalGame() {
     }
   );
 
-  // Handsfree
-  if (!animalHandsfree) {
-    animalHandsfree = new Handsfree({ hands: true, maxNumHands: 2 });
-  }
-  animalHandsfree.start();
-
-  console.log("ml5 version:", ml5.version);
-
   // 단계 초기화
   animalCurrentStep = 1;
   animalStepDone = false;
@@ -238,6 +230,8 @@ function nextAnimalStep() {
   if (animalCurrentStep === 2) {
     animalFood.visible = true;
     animalBowl.visible = true;
+    animalFeedState = "CARROT";
+    animalFeedHoldStart = null;
   } else if (animalCurrentStep === 3) {
     animalWaveState = "DOWN";
     animalWaveCount = 0;
@@ -264,15 +258,12 @@ function drawAnimalGame() {
     animalStepDone = animalDetectOpenArms();
   } else if (animalCurrentStep === 2) {
     animalDrawObjects();
-    let { left, right } = animalGetHandCenters();
-
-    if (left) animalCheckCollision(left);
-    if (right) animalCheckCollision(right);
-
-    if (!animalFood.visible && !animalBowl.visible) animalStepDone = true;
+    animalUpdateFeedStepByBodyPose();
+    if (animalFeedState === "DONE") animalStepDone = true;
   } else if (animalCurrentStep === 3) {
     animalDrawKeypoints();
     animalDetectWave();
+  
   } else if (animalCurrentStep === 4) {
     animalDrawKeypoints();
     animalPlayWithAnimal();
@@ -467,7 +458,7 @@ function animalDetectOpenArms() {
 }
 
 
-// ================== 2단계: 밥주기 (Handsfree) ==================
+// ================== 2단계: 밥 주기 ==================
 function animalDrawObjects() {
   push();
   textSize(100);
@@ -477,55 +468,83 @@ function animalDrawObjects() {
   pop();
 }
 
-function animalCheckCollision(hand) {
-  // 당근부터 터치
-  if (animalFood.visible) {
-    if (dist(hand.x, hand.y, animalFood.x, animalFood.y) < animalFood.r) {
-      animalFood.visible = false;
-      console.log("당근 터치!");
-    }
+function animalPointInCircle(p, c) {
+  if (!p || !c || !c.visible) return false;
+  return dist(p.x, p.y, c.x, c.y) <= c.r;
+}
+
+// step2에서 쓸 오른손 포인트(손목) 가져오기
+function animalGetRightHandPoint() {
+  // MoveNet은 "right_wrist"가 잘 잡힘
+  let rw = animalGetPart("right_wrist");
+  if (!rw) return null;
+  return { x: rw.x, y: rw.y };
+}
+
+// 2초 홀드 진행/완료 판정 + 안내 텍스트(옵션)
+function animalUpdateFeedStepByBodyPose() {
+  let hand = animalGetRightHandPoint();
+  if (!hand) {
+    animalFeedHoldStart = null;
     return;
   }
 
-  // 당근이 사라진 뒤에야 그릇 터치
-  if (!animalFood.visible && animalBowl.visible) {
-    if (dist(hand.x, hand.y, animalBowl.x, animalBowl.y) < animalBowl.r) {
-      animalBowl.visible = false;
-      console.log("그릇 터치!");
+  // 디버그로 오른손 위치 표시(원하면 유지)
+  push();
+  noStroke();
+  fill(255, 0, 0);
+  ellipse(hand.x, hand.y, 10, 10);
+  pop();
+
+  // 어떤 타겟을 보고 있는지 결정
+  let target = null;
+  let label = "";
+
+  if (animalFeedState === "CARROT") {
+    target = animalFood;
+    label = "당근";
+  } else if (animalFeedState === "BOWL") {
+    target = animalBowl;
+    label = "그릇";
+  } else {
+    return;
+  }
+
+  let inside = animalPointInCircle(hand, target);
+
+  if (inside) {
+    if (animalFeedHoldStart === null) animalFeedHoldStart = millis();
+    let elapsed = millis() - animalFeedHoldStart;
+
+    // 하단 진행 표시(선택)
+    push();
+    fill(0, 0, 0, 150);
+    rect(0, height - 70, width, 70);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text(`${label} 터치 유지: ${(elapsed/1000).toFixed(1)}초 / 2.0초`, width/2, height - 35);
+    pop();
+
+    if (elapsed >= ANIMAL_FEED_HOLD_MS) {
+      // 2초 달성 → 다음 상태로
+      animalFeedHoldStart = null;
+
+      if (animalFeedState === "CARROT") {
+        // 당근 완료 → 당근 숨기고, 그릇 단계로
+        animalFood.visible = false;
+        animalFeedState = "BOWL";
+      } else if (animalFeedState === "BOWL") {
+        // 그릇 완료 → 그릇 숨기고, 단계 완료
+        animalBowl.visible = false;
+        animalFeedState = "DONE";
+        animalStepDone = true;
+      }
     }
+  } else {
+    // 원 밖으로 나가면 홀드 리셋
+    animalFeedHoldStart = null;
   }
-}
-
-function animalGetHandCenters() {
-  if (
-    !animalHandsfree ||
-    !animalHandsfree.data ||
-    !animalHandsfree.data.hands ||
-    !animalHandsfree.data.hands.multiHandLandmarks
-  )
-    return { right: null, left: null };
-
-  let landmarks = animalHandsfree.data.hands.multiHandLandmarks;
-  let handedness = animalHandsfree.data.hands.multiHandedness;
-  let right = null,
-    left = null;
-
-  if (landmarks.length > 0) {
-    markActivity();
-  }
-
-  for (let h = 0; h < landmarks.length; h++) {
-    let lx = map(landmarks[h][0].x, 0, 1, 0, width);
-    let ly = map(landmarks[h][0].y, 0, 1, 0, height);
-
-    // 손 좌표도 좌우 반전
-    lx = width - lx;
-
-    let label = handedness[h].label;
-    if (label === "Right") right = { x: lx, y: ly };
-    if (label === "Left") left = { x: lx, y: ly };
-  }
-  return { right, left };
 }
 
 
@@ -699,6 +718,9 @@ function animalForceNextStep() {
     animalFood.visible = true;
     animalBowl.visible = true;
 
+    animalFeedState = "CARROT";
+    animalFeedHoldStart = null;
+
     console.log("[Animal] SKIP: 1 → 2 (밥주기 시작, 당근/그릇 활성화)");
     return;
   }
@@ -742,9 +764,12 @@ function resetAnimalStep1() {
 }
 
 function resetAnimalStep2() {
-  // 밥 주기 (당근 + 그릇 다시 보이게)
   animalFood.visible = true;
   animalBowl.visible = true;
+
+  animalFeedState = "CARROT";
+  animalFeedHoldStart = null;
+
   animalStepDone = false;
 }
 

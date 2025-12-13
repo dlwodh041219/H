@@ -586,6 +586,7 @@ function resetAllState() {
   // 머리/악세사리 선택 변수들도 쓰고 있다면 같이 0으로
   if (typeof selectedHairNum !== "undefined") selectedHairNum = 0;
   if (typeof selectedAccNum  !== "undefined") selectedAccNum  = 0;
+  if (typeof selectedGlassNum  !== "undefined") selectedGlassNum  = 0;
 }
 
 function backToAvatarFromGame() {
