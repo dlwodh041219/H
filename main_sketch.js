@@ -1,8 +1,8 @@
 let fontStart;      
 let fontTemplate; 
 let img;
-// let qrImg;
 let qrEnterTime = 0;
+let canvasEl = null;
 
 // phase: 1 = 시작 화면, 2 = 템플릿 선택, 3 = 이모지 커스텀, 4 = 각 게임 화면
 let phase = 1;
@@ -32,7 +32,7 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(640, 480);
+  canvasEl = createCanvas(640, 480);
   noCursor();
 
   setupAvatar();
@@ -100,6 +100,10 @@ function draw() {
     console.log("⏰ 1분 30초 동안 활동 없음 → 초기 화면으로 리셋");
     resetAllState();      // 이미 phase=1, 카메라 정리 등을 해 주는 함수
     lastActivityTime = millis();  // 리셋 직후 타이머 다시 시작
+  }
+
+  if (phase !== 5 && typeof hideQRDiv === "function") {
+    hideQRDiv();
   }
 }
 
@@ -521,6 +525,8 @@ function mousePressed() {
 }
 
 function resetAllState() {
+  if (typeof resetQRPageState === "function") resetQRPageState();
+
   // 1) 화면 단계 기본값
   phase = 1;
   selectedGame = null;
@@ -718,9 +724,12 @@ function goToQR() {
     houseVideo.remove();   // ❗
     houseVideo = null;
   }
-
+  
   // QR 화면 진입 시간 기록 (디바운스)
   qrEnterTime = millis();
+
+  // ✅ (추가) QR 페이지 들어가기 전, 이전 QR DOM/상태 정리
+  if (typeof resetQRPageState === "function") resetQRPageState();
 
   gameMode = "intro";  // 다시 게임으로 안 돌아가게
   phase    = 5;        // QR 단계로 이동

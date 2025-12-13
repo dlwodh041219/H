@@ -10,13 +10,12 @@ let animalGuideEndTime = null;
 let animalCurrentStep = 1;
 let animalStepDone = false;
 
-//가이드 이미지
+// 가이드 이미지
 let showAnimalGuide = true;
 let animalGuideStartTime = 0;
 let animalGuideIndex = 0;        // 현재 가이드 이미지 번호
 let animalLastGuideSwitch = 0;   // 마지막으로 이미지 바꾼 시각
 let ANIMAL_GUIDE_INTERVAL = 1500; // 이미지 전환 간격
-
 
 // 기준선
 let animalHeadY, animalChestY;
@@ -113,7 +112,20 @@ function checkGuideLoaded(step) {
   guideImagesReady[step] = allLoaded;
 }
 
+// ====== 캡쳐(사진찍기) ======
+let animalCaptureMode = "NONE"; // "NONE" | "PREVIEW"
+let animalCapturedImg = null;   // p5.Image
+let animalFlashAlpha = 0;       // 플래시 효과 알파
+let animalLastCaptureDataURL = null; // QR 업로드/생성용 데이터 (선택)
+let animalPhotoBtn = { x:0, y:0, w:0, h:0 };
+let animalRetakeBtn = { x:0, y:0, w:0, h:0 };
+let animalSaveQRBtn = { x:0, y:0, w:0, h:0 };
+let animalFrameNoUI = null;
 
+// ====== 촬영 카운트다운 ======
+let animalCountdownActive = false;
+let animalCountdownStart = 0;
+let ANIMAL_COUNTDOWN_MS = 900;
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -163,6 +175,12 @@ function initAnimalGame() {
   puppyImgs[1] = loadImage('puppy2.png');
   puppyImgs[2] = loadImage('puppy3.png');
   puppyImgs[3] = loadImage('puppy4.png');
+
+
+  animalCaptureMode = "NONE";
+  animalCapturedImg = null;
+  animalFlashAlpha = 0;
+  animalLastCaptureDataURL = null;
 
 }
 
@@ -251,6 +269,11 @@ function drawAnimalGame() {
   // ★ 캠 + 이모지 아바타 풀스크린 (stage2_avatar.js의 함수)
   drawFaceFullScreen();
 
+  if (animalCurrentStep > 4 && animalCaptureMode === "PREVIEW") {
+    animalDrawPhotoPreview();
+    animalDrawFlashEffect(); // 프리뷰에서도 플래시 잔상 자연스럽게 사라지게
+    return;
+  }
 
   // 이하 로직은 그대로 유지 (포즈/단계 판정)
   if (animalCurrentStep === 1) {
@@ -269,7 +292,14 @@ function drawAnimalGame() {
     animalPlayWithAnimal();
   }
 
+  // ✅ (중요) UI 그리기 전에, "UI 없는 화면"을 저장해둠
+  if (animalCurrentStep > 4 && animalCaptureMode === "NONE") {
+    animalFrameNoUI = get(0, 0, width, height);
+  }
+
   animalDrawUI();
+  animalDrawFlashEffect();
+  animalDrawCountdownOverlay();
 
   push();
   resetMatrix();
@@ -288,8 +318,6 @@ function drawAnimalGame() {
       animalGuideIndex = 0;
       animalLastGuideSwitch = millis();
     }
-
-
 
     if (animalCurrentStep === 2) {
       animalFood.visible = true;
@@ -614,6 +642,204 @@ function animalPlayWithAnimal() {
   if (animalSwingCount >= 3) animalStepDone = true;
 }
 
+// ================== 캡쳐 관련 함수 ==================
+function animalPointInRect(px, py, r) {
+  return (
+    px > r.x && px < r.x + r.w &&
+    py > r.y && py < r.y + r.h
+  );
+}
+
+function animalTakePhoto() {
+  // ✅ UI 없는 프레임이 있으면 그걸로 캡쳐
+  if (animalFrameNoUI) {
+    animalCapturedImg = animalFrameNoUI.get(); // 복사본
+  } else {
+    // 안전장치: 없으면 그냥 전체 캡쳐
+    animalCapturedImg = get(0, 0, width, height);
+  }
+
+  animalFlashAlpha = 255;
+
+  // ✅ 데이터URL도 "UI 없는 이미지" 기준으로 만들기 (중요!)
+  try {
+    // p5.Image → dataURL 변환: 임시 그래픽스에 그려서 추출
+    let g = createGraphics(width, height);
+    g.image(animalCapturedImg, 0, 0, width, height);
+    animalLastCaptureDataURL = g.canvas.toDataURL("image/png");
+    window.__LAST_CAPTURE_DATAURL__ = animalLastCaptureDataURL;
+    g.remove();
+  } catch (e) {
+    console.log("toDataURL 실패(무시 가능):", e);
+    animalLastCaptureDataURL = null;
+  }
+
+  animalCaptureMode = "PREVIEW";
+}
+
+
+function animalDrawFlashEffect() {
+  if (animalFlashAlpha <= 0) return;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(255, animalFlashAlpha);
+  rect(0, 0, width, height);
+
+  // 프레임(테두리) 느낌을 약간
+  noFill();
+  stroke(255, animalFlashAlpha);
+  strokeWeight(18);
+  rect(0, 0, width, height);
+
+  pop();
+
+  // 감쇠
+  animalFlashAlpha -= 25;
+  if (animalFlashAlpha < 0) animalFlashAlpha = 0;
+}
+
+function animalDrawPhotoButton() {
+  // 중앙 하단 원형 셔터 버튼
+  let r = 34;
+  let cx = width / 2;
+  let cy = height - 60;
+
+  // 클릭 영역 저장 (원형이지만 rect 형태로도 저장해둠)
+  animalPhotoBtn.x = cx - r;
+  animalPhotoBtn.y = cy - r;
+  animalPhotoBtn.w = r * 2;
+  animalPhotoBtn.h = r * 2;
+
+  let hover = dist(mouseX, mouseY, cx, cy) < r;
+
+  push();
+  resetMatrix();
+  noStroke();
+
+  // 그림자 (눌러야 할 곳 강조)
+  fill(0, 80);
+  ellipse(cx, cy + 3, r * 2.2, r * 2.2);
+
+  // 바깥 링
+  fill(255);
+  ellipse(cx, cy, hover ? r * 2.15 : r * 2.05, hover ? r * 2.15 : r * 2.05);
+
+  // 안쪽
+  fill(230);
+  ellipse(cx, cy, hover ? r * 1.55 : r * 1.45, hover ? r * 1.55 : r * 1.45);
+
+  // 안내 텍스트
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(14);
+  text("셔터를 눌러 사진을 찍어요", width / 2, cy - 55);
+  pop();
+}
+
+function animalDrawCountdownOverlay() {
+  if (!animalCountdownActive) return;
+
+  let elapsed = millis() - animalCountdownStart;
+  let left = max(0, ANIMAL_COUNTDOWN_MS - elapsed);
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(0, 150);
+  rect(0, 0, width, height);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(42);
+  text("준비!", width / 2, height / 2 - 20);
+
+  textSize(22);
+  text((left / 1000).toFixed(1), width / 2, height / 2 + 25);
+  pop();
+
+  if (elapsed >= ANIMAL_COUNTDOWN_MS) {
+    animalCountdownActive = false;
+    animalTakePhoto(); // ✅ 여기서 실제 캡쳐
+  }
+}
+
+function animalDrawPhotoPreview() {
+  background(0);
+
+  // 캡쳐 이미지 크게 보여주기
+  if (animalCapturedImg) {
+    push();
+    resetMatrix();
+    imageMode(CENTER);
+
+    // 화면에 꽉 차게(비율 유지)
+    let iw = animalCapturedImg.width;
+    let ih = animalCapturedImg.height;
+    let scale = min(width / iw, height / ih);
+    let w = iw * scale;
+    let h = ih * scale;
+
+    image(animalCapturedImg, width/2, height/2, w, h);
+
+    // 살짝 프레임 느낌
+    noFill();
+    stroke(255);
+    strokeWeight(6);
+    rectMode(CENTER);
+    rect(width/2, height/2, w, h, 10);
+    pop();
+  }
+
+  // 하단 버튼 2개: 다시 찍기 / QR 저장
+  let btnW = 160, btnH = 52;
+  let gap = 18;
+  let cy = height - 55;
+
+  let leftCx = width/2 - (btnW/2 + gap/2);
+  let rightCx = width/2 + (btnW/2 + gap/2);
+
+  animalRetakeBtn.x = leftCx - btnW/2;
+  animalRetakeBtn.y = cy - btnH/2;
+  animalRetakeBtn.w = btnW;
+  animalRetakeBtn.h = btnH;
+
+  animalSaveQRBtn.x = rightCx - btnW/2;
+  animalSaveQRBtn.y = cy - btnH/2;
+  animalSaveQRBtn.w = btnW;
+  animalSaveQRBtn.h = btnH;
+
+  let hoverRetake = animalPointInRect(mouseX, mouseY, animalRetakeBtn);
+  let hoverSave   = animalPointInRect(mouseX, mouseY, animalSaveQRBtn);
+
+  push();
+  resetMatrix();
+  rectMode(CORNER);
+  noStroke();
+
+  fill(hoverRetake ? 245 : 230);
+  rect(animalRetakeBtn.x, animalRetakeBtn.y, btnW, btnH, 16);
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("다시 찍기", leftCx, cy);
+
+  let saving = animalGoToQRTriggered;
+  fill(hoverSave ? color(230,164,174) : color(200,150,160));
+  if (saving) fill(160); // ✅ 저장 중이면 비활성 느낌
+  rect(animalSaveQRBtn.x, animalSaveQRBtn.y, btnW, btnH, 16);
+  fill(0);
+  text(saving ? "저장 중..." : "QR 저장", rightCx, cy);
+
+  // 안내 텍스트(선택)
+  fill(255);
+  textSize(14);
+  text("사진을 확인하고 저장하거나 다시 찍을 수 있어요", width/2, 24 + 2);
+
+  pop();
+}
+
 
 // ================== 디버그용 키포인트 표시 ==================
 function animalDrawKeypoints() {
@@ -635,6 +861,25 @@ function animalDrawKeypoints() {
 }
 
 function mousePressedAnimalGame() {
+  if (animalCurrentStep > 4 && animalCaptureMode === "PREVIEW") {
+    if (animalPointInRect(mouseX, mouseY, animalRetakeBtn)) {
+      console.log("[Animal] 다시 찍기");
+      animalCaptureMode = "NONE";
+      animalCapturedImg = null;
+      return;
+    }
+    if (animalPointInRect(mouseX, mouseY, animalSaveQRBtn)) {
+      console.log("[Animal] QR 저장(프리뷰) → goToQR()");
+      if (!animalGoToQRTriggered && typeof goToQR === "function") {
+        animalGoToQRTriggered = true;
+        goToQR();
+      }
+      return;
+    }
+    return; // 프리뷰 중 다른 클릭 무시
+  }
+
+
   // 🔹 BACK 버튼 먼저 처리
   if (
     mouseX > animalBackBtn.x &&
@@ -673,6 +918,26 @@ function mousePressedAnimalGame() {
 
     return; // BACK 처리 끝
   }
+
+  // ✅ 완료 상태(프리뷰 아님)에서 "사진 찍기" 버튼
+  if (animalCurrentStep > 4 && animalCaptureMode === "NONE") {
+  // ✅ 원형 셔터 클릭 판정
+  let cx = animalPhotoBtn.x + animalPhotoBtn.w / 2;
+  let cy = animalPhotoBtn.y + animalPhotoBtn.h / 2;
+  let r  = animalPhotoBtn.w / 2;
+
+  if (dist(mouseX, mouseY, cx, cy) < r) {
+    console.log("[Animal] 사진 찍기 클릭 → 카운트다운 시작");
+
+    // 이미 카운트다운 중이면 무시
+    if (animalCountdownActive) return;
+
+    animalCountdownActive = true;
+    animalCountdownStart = millis();
+    return;
+  }
+}
+
 
   // 🔹 여기서부터는 기존 SKIP / QR 로직 그대로
   if (animalCurrentStep <= 4) {
@@ -839,25 +1104,9 @@ function animalDrawUI() {
     textAlign(CENTER, CENTER);
     text("< 이전", leftCenterX, centerY);
     pop();
+  
 
-    // QR 버튼
-    let qrHover =
-      mouseX > animalQRBtn.x &&
-      mouseX < animalQRBtn.x + animalQRBtn.w &&
-      mouseY > animalQRBtn.y &&
-      mouseY < animalQRBtn.y + animalQRBtn.h;
-
-    push();
-    rectMode(CORNER);
-    noStroke();
-    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
-    rect(animalQRBtn.x, animalQRBtn.y, btnW, btnH, 10);
-
-    fill(0);
-    textSize(14);
-    textAlign(CENTER, CENTER);
-    text("QR 저장 >", rightCenterX, centerY);
-    pop();
+    animalDrawPhotoButton();
 
     return;
   }
