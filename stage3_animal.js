@@ -2,7 +2,6 @@
 let animalBodyPose;
 let animalPoses = [];
 let animalCurrentPose = null;
-let animalHandsfree;
 let animalGuideImgs = {};   // ⭐ 단계별 가이드 이미지 저장용
 let animalGuideLoaded = false; // 로딩 완료 여부
 let animalGuideEndTime = null;
@@ -11,13 +10,12 @@ let animalGuideEndTime = null;
 let animalCurrentStep = 1;
 let animalStepDone = false;
 
-//가이드 이미지
+// 가이드 이미지
 let showAnimalGuide = true;
 let animalGuideStartTime = 0;
 let animalGuideIndex = 0;        // 현재 가이드 이미지 번호
 let animalLastGuideSwitch = 0;   // 마지막으로 이미지 바꾼 시각
 let ANIMAL_GUIDE_INTERVAL = 1500; // 이미지 전환 간격
-
 
 // 기준선
 let animalHeadY, animalChestY;
@@ -31,9 +29,10 @@ let ANIMAL_BASE_MIN_CONF = 0.15;
 let animalHoldStartTime = null;
 let ANIMAL_HOLD_DURATION = 3000; // 3초
 
-// 2단계: 밥주기(Handsfree)
-let animalFood = { x: 500, y: 130, r: 50, visible: true };
-let animalBowl = { x: 320, y: 400, r: 60, visible: true };
+// 2단계: 밥주기
+let animalFeedState = "CARROT"; // "CARROT" -> "BOWL" -> "DONE"
+let animalFeedHoldStart = null;
+let ANIMAL_FEED_HOLD_MS = 2000; // 2초
 
 // 3단계: 쓰다듬기
 let animalWaveState = "DOWN";
@@ -113,7 +112,20 @@ function checkGuideLoaded(step) {
   guideImagesReady[step] = allLoaded;
 }
 
+// ====== 캡쳐(사진찍기) ======
+let animalCaptureMode = "NONE"; // "NONE" | "PREVIEW"
+let animalCapturedImg = null;   // p5.Image
+let animalFlashAlpha = 0;       // 플래시 효과 알파
+let animalLastCaptureDataURL = null; // QR 업로드/생성용 데이터 (선택)
+let animalPhotoBtn = { x:0, y:0, w:0, h:0 };
+let animalRetakeBtn = { x:0, y:0, w:0, h:0 };
+let animalSaveQRBtn = { x:0, y:0, w:0, h:0 };
+let animalFrameNoUI = null;
 
+// ====== 촬영 카운트다운 ======
+let animalCountdownActive = false;
+let animalCountdownStart = 0;
+let ANIMAL_COUNTDOWN_MS = 3000;
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -137,14 +149,6 @@ function initAnimalGame() {
       animalBodyPose.detectStart(video, animalGotPoses);  // ★ animalVideo → video
     }
   );
-
-  // Handsfree
-  if (!animalHandsfree) {
-    animalHandsfree = new Handsfree({ hands: true, maxNumHands: 2 });
-  }
-  animalHandsfree.start();
-
-  console.log("ml5 version:", ml5.version);
 
   // 단계 초기화
   animalCurrentStep = 1;
@@ -171,6 +175,12 @@ function initAnimalGame() {
   puppyImgs[1] = loadImage('puppy2.png');
   puppyImgs[2] = loadImage('puppy3.png');
   puppyImgs[3] = loadImage('puppy4.png');
+
+
+  animalCaptureMode = "NONE";
+  animalCapturedImg = null;
+  animalFlashAlpha = 0;
+  animalLastCaptureDataURL = null;
 
 }
 
@@ -238,6 +248,8 @@ function nextAnimalStep() {
   if (animalCurrentStep === 2) {
     animalFood.visible = true;
     animalBowl.visible = true;
+    animalFeedState = "CARROT";
+    animalFeedHoldStart = null;
   } else if (animalCurrentStep === 3) {
     animalWaveState = "DOWN";
     animalWaveCount = 0;
@@ -257,6 +269,11 @@ function drawAnimalGame() {
   // ★ 캠 + 이모지 아바타 풀스크린 (stage2_avatar.js의 함수)
   drawFaceFullScreen();
 
+  if (animalCurrentStep > 4 && animalCaptureMode === "PREVIEW") {
+    animalDrawPhotoPreview();
+    animalDrawFlashEffect(); // 프리뷰에서도 플래시 잔상 자연스럽게 사라지게
+    return;
+  }
 
   // 이하 로직은 그대로 유지 (포즈/단계 판정)
   if (animalCurrentStep === 1) {
@@ -264,21 +281,25 @@ function drawAnimalGame() {
     animalStepDone = animalDetectOpenArms();
   } else if (animalCurrentStep === 2) {
     animalDrawObjects();
-    let { left, right } = animalGetHandCenters();
-
-    if (left) animalCheckCollision(left);
-    if (right) animalCheckCollision(right);
-
-    if (!animalFood.visible && !animalBowl.visible) animalStepDone = true;
+    animalUpdateFeedStepByBodyPose();
+    if (animalFeedState === "DONE") animalStepDone = true;
   } else if (animalCurrentStep === 3) {
     animalDrawKeypoints();
     animalDetectWave();
+  
   } else if (animalCurrentStep === 4) {
     animalDrawKeypoints();
     animalPlayWithAnimal();
   }
 
+  // ✅ (중요) UI 그리기 전에, "UI 없는 화면"을 저장해둠
+  if (animalCurrentStep > 4 && animalCaptureMode === "NONE") {
+    animalFrameNoUI = get(0, 0, width, height);
+  }
+
   animalDrawUI();
+  animalDrawFlashEffect();
+  animalDrawCountdownOverlay();
 
   push();
   resetMatrix();
@@ -297,8 +318,6 @@ function drawAnimalGame() {
       animalGuideIndex = 0;
       animalLastGuideSwitch = millis();
     }
-
-
 
     if (animalCurrentStep === 2) {
       animalFood.visible = true;
@@ -431,7 +450,7 @@ function animalDetectOpenArms() {
   let elbowDist = dist(le.x, le.y, re.x, re.y);
 
   let chestTopY = Math.min(ls.y, rs.y);
-  let chestBottomY = chestTopY + shoulderWidth * 1.3;
+  let chestBottomY = chestTopY + shoulderWidth * 1.5;
 
   let wristsAtChestHeight =
     lw.y > chestTopY &&
@@ -439,8 +458,8 @@ function animalDetectOpenArms() {
     rw.y > chestTopY &&
     rw.y < chestBottomY;
 
-  let armsWideEnough = wristDist > shoulderWidth * 2.3;
-  let elbowsWide = elbowDist > shoulderWidth * 1.6;
+  let armsWideEnough = wristDist > shoulderWidth * 1.9;
+  let elbowsWide = elbowDist > shoulderWidth * 1.4;
 
   let postureOK = armsWideEnough && elbowsWide && wristsAtChestHeight;
 
@@ -467,7 +486,7 @@ function animalDetectOpenArms() {
 }
 
 
-// ================== 2단계: 밥주기 (Handsfree) ==================
+// ================== 2단계: 밥 주기 ==================
 function animalDrawObjects() {
   push();
   textSize(100);
@@ -477,55 +496,83 @@ function animalDrawObjects() {
   pop();
 }
 
-function animalCheckCollision(hand) {
-  // 당근부터 터치
-  if (animalFood.visible) {
-    if (dist(hand.x, hand.y, animalFood.x, animalFood.y) < animalFood.r) {
-      animalFood.visible = false;
-      console.log("당근 터치!");
-    }
+function animalPointInCircle(p, c) {
+  if (!p || !c || !c.visible) return false;
+  return dist(p.x, p.y, c.x, c.y) <= c.r;
+}
+
+// step2에서 쓸 오른손 포인트(손목) 가져오기
+function animalGetRightHandPoint() {
+  // MoveNet은 "right_wrist"가 잘 잡힘
+  let rw = animalGetPart("right_wrist");
+  if (!rw) return null;
+  return { x: rw.x, y: rw.y };
+}
+
+// 2초 홀드 진행/완료 판정 + 안내 텍스트(옵션)
+function animalUpdateFeedStepByBodyPose() {
+  let hand = animalGetRightHandPoint();
+  if (!hand) {
+    animalFeedHoldStart = null;
     return;
   }
 
-  // 당근이 사라진 뒤에야 그릇 터치
-  if (!animalFood.visible && animalBowl.visible) {
-    if (dist(hand.x, hand.y, animalBowl.x, animalBowl.y) < animalBowl.r) {
-      animalBowl.visible = false;
-      console.log("그릇 터치!");
+  // 디버그로 오른손 위치 표시(원하면 유지)
+  push();
+  noStroke();
+  fill(255, 0, 0);
+  ellipse(hand.x, hand.y, 10, 10);
+  pop();
+
+  // 어떤 타겟을 보고 있는지 결정
+  let target = null;
+  let label = "";
+
+  if (animalFeedState === "CARROT") {
+    target = animalFood;
+    label = "당근";
+  } else if (animalFeedState === "BOWL") {
+    target = animalBowl;
+    label = "그릇";
+  } else {
+    return;
+  }
+
+  let inside = animalPointInCircle(hand, target);
+
+  if (inside) {
+    if (animalFeedHoldStart === null) animalFeedHoldStart = millis();
+    let elapsed = millis() - animalFeedHoldStart;
+
+    // 하단 진행 표시(선택)
+    push();
+    fill(0, 0, 0, 150);
+    rect(0, height - 70, width, 70);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text(`${label} 터치 유지: ${(elapsed/1000).toFixed(1)}초 / 2.0초`, width/2, height - 35);
+    pop();
+
+    if (elapsed >= ANIMAL_FEED_HOLD_MS) {
+      // 2초 달성 → 다음 상태로
+      animalFeedHoldStart = null;
+
+      if (animalFeedState === "CARROT") {
+        // 당근 완료 → 당근 숨기고, 그릇 단계로
+        animalFood.visible = false;
+        animalFeedState = "BOWL";
+      } else if (animalFeedState === "BOWL") {
+        // 그릇 완료 → 그릇 숨기고, 단계 완료
+        animalBowl.visible = false;
+        animalFeedState = "DONE";
+        animalStepDone = true;
+      }
     }
+  } else {
+    // 원 밖으로 나가면 홀드 리셋
+    animalFeedHoldStart = null;
   }
-}
-
-function animalGetHandCenters() {
-  if (
-    !animalHandsfree ||
-    !animalHandsfree.data ||
-    !animalHandsfree.data.hands ||
-    !animalHandsfree.data.hands.multiHandLandmarks
-  )
-    return { right: null, left: null };
-
-  let landmarks = animalHandsfree.data.hands.multiHandLandmarks;
-  let handedness = animalHandsfree.data.hands.multiHandedness;
-  let right = null,
-    left = null;
-
-  if (landmarks.length > 0) {
-    markActivity();
-  }
-
-  for (let h = 0; h < landmarks.length; h++) {
-    let lx = map(landmarks[h][0].x, 0, 1, 0, width);
-    let ly = map(landmarks[h][0].y, 0, 1, 0, height);
-
-    // 손 좌표도 좌우 반전
-    lx = width - lx;
-
-    let label = handedness[h].label;
-    if (label === "Right") right = { x: lx, y: ly };
-    if (label === "Left") left = { x: lx, y: ly };
-  }
-  return { right, left };
 }
 
 
@@ -595,6 +642,204 @@ function animalPlayWithAnimal() {
   if (animalSwingCount >= 3) animalStepDone = true;
 }
 
+// ================== 캡쳐 관련 함수 ==================
+function animalPointInRect(px, py, r) {
+  return (
+    px > r.x && px < r.x + r.w &&
+    py > r.y && py < r.y + r.h
+  );
+}
+
+function animalTakePhoto() {
+  // ✅ UI 없는 프레임이 있으면 그걸로 캡쳐
+  if (animalFrameNoUI) {
+    animalCapturedImg = animalFrameNoUI.get(); // 복사본
+  } else {
+    // 안전장치: 없으면 그냥 전체 캡쳐
+    animalCapturedImg = get(0, 0, width, height);
+  }
+
+  animalFlashAlpha = 255;
+
+  // ✅ 데이터URL도 "UI 없는 이미지" 기준으로 만들기 (중요!)
+  try {
+    // p5.Image → dataURL 변환: 임시 그래픽스에 그려서 추출
+    let g = createGraphics(width, height);
+    g.image(animalCapturedImg, 0, 0, width, height);
+    animalLastCaptureDataURL = g.canvas.toDataURL("image/png");
+    window.__LAST_CAPTURE_DATAURL__ = animalLastCaptureDataURL;
+    g.remove();
+  } catch (e) {
+    console.log("toDataURL 실패(무시 가능):", e);
+    animalLastCaptureDataURL = null;
+  }
+
+  animalCaptureMode = "PREVIEW";
+}
+
+
+function animalDrawFlashEffect() {
+  if (animalFlashAlpha <= 0) return;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(255, animalFlashAlpha);
+  rect(0, 0, width, height);
+
+  // 프레임(테두리) 느낌을 약간
+  noFill();
+  stroke(255, animalFlashAlpha);
+  strokeWeight(18);
+  rect(0, 0, width, height);
+
+  pop();
+
+  // 감쇠
+  animalFlashAlpha -= 25;
+  if (animalFlashAlpha < 0) animalFlashAlpha = 0;
+}
+
+function animalDrawPhotoButton() {
+  // 중앙 하단 원형 셔터 버튼
+  let r = 34;
+  let cx = width / 2;
+  let cy = height - 60;
+
+  // 클릭 영역 저장 (원형이지만 rect 형태로도 저장해둠)
+  animalPhotoBtn.x = cx - r;
+  animalPhotoBtn.y = cy - r;
+  animalPhotoBtn.w = r * 2;
+  animalPhotoBtn.h = r * 2;
+
+  let hover = dist(mouseX, mouseY, cx, cy) < r;
+
+  push();
+  resetMatrix();
+  noStroke();
+
+  // 그림자 (눌러야 할 곳 강조)
+  fill(0, 80);
+  ellipse(cx, cy + 3, r * 2.2, r * 2.2);
+
+  // 바깥 링
+  fill(255);
+  ellipse(cx, cy, hover ? r * 2.15 : r * 2.05, hover ? r * 2.15 : r * 2.05);
+
+  // 안쪽
+  fill(230);
+  ellipse(cx, cy, hover ? r * 1.55 : r * 1.45, hover ? r * 1.55 : r * 1.45);
+}
+
+function animalDrawCountdownOverlay() {
+  if (!animalCountdownActive) return;
+
+  let elapsed = millis() - animalCountdownStart;
+
+  let idx = floor(elapsed / 1000);
+  let num = 3 - idx;
+
+  // 3초가 넘으면 촬영
+  if (elapsed >= ANIMAL_COUNTDOWN_MS) {
+    animalCountdownActive = false;
+    animalTakePhoto();
+    return;
+  }
+
+  // num이 3,2,1일 때만 표시
+  if (num < 1) num = 1;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(0, 150);
+  rect(0, 0, width, height);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(140);                 // 더 크게
+  text(num, width / 2, height / 2);
+  pop();
+}
+
+
+
+function animalDrawPhotoPreview() {
+  background(0);
+
+  // 캡쳐 이미지 크게 보여주기
+  if (animalCapturedImg) {
+    push();
+    resetMatrix();
+    imageMode(CENTER);
+
+    // 화면에 꽉 차게(비율 유지)
+    let iw = animalCapturedImg.width;
+    let ih = animalCapturedImg.height;
+    let scale = min(width / iw, height / ih);
+    let w = iw * scale;
+    let h = ih * scale;
+
+    image(animalCapturedImg, width/2, height/2, w, h);
+
+    // 살짝 프레임 느낌
+    noFill();
+    stroke(255);
+    strokeWeight(6);
+    rectMode(CENTER);
+    rect(width/2, height/2, w, h, 10);
+    pop();
+  }
+
+  // 하단 버튼 2개: 다시 찍기 / QR 저장
+  let btnW = 160, btnH = 52;
+  let gap = 18;
+  let cy = height - 55;
+
+  let leftCx = width/2 - (btnW/2 + gap/2);
+  let rightCx = width/2 + (btnW/2 + gap/2);
+
+  animalRetakeBtn.x = leftCx - btnW/2;
+  animalRetakeBtn.y = cy - btnH/2;
+  animalRetakeBtn.w = btnW;
+  animalRetakeBtn.h = btnH;
+
+  animalSaveQRBtn.x = rightCx - btnW/2;
+  animalSaveQRBtn.y = cy - btnH/2;
+  animalSaveQRBtn.w = btnW;
+  animalSaveQRBtn.h = btnH;
+
+  let hoverRetake = animalPointInRect(mouseX, mouseY, animalRetakeBtn);
+  let hoverSave   = animalPointInRect(mouseX, mouseY, animalSaveQRBtn);
+
+  push();
+  resetMatrix();
+  rectMode(CORNER);
+  noStroke();
+
+  fill(hoverRetake ? 245 : 230);
+  rect(animalRetakeBtn.x, animalRetakeBtn.y, btnW, btnH, 16);
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("다시 찍기", leftCx, cy);
+
+  let saving = animalGoToQRTriggered;
+  fill(hoverSave ? color(230,164,174) : color(200,150,160));
+  if (saving) fill(160); // ✅ 저장 중이면 비활성 느낌
+  rect(animalSaveQRBtn.x, animalSaveQRBtn.y, btnW, btnH, 16);
+  fill(0);
+  text(saving ? "저장 중..." : "QR 저장", rightCx, cy);
+
+  // 안내 텍스트(선택)
+  fill(255);
+  textStyle(BOLD);
+  textSize(20);
+  text("사진을 확인하고 저장하거나 다시 찍을 수 있어요", width/2, 24 + 2);
+
+  pop();
+}
+
 
 // ================== 디버그용 키포인트 표시 ==================
 function animalDrawKeypoints() {
@@ -616,6 +861,25 @@ function animalDrawKeypoints() {
 }
 
 function mousePressedAnimalGame() {
+  if (animalCurrentStep > 4 && animalCaptureMode === "PREVIEW") {
+    if (animalPointInRect(mouseX, mouseY, animalRetakeBtn)) {
+      console.log("[Animal] 다시 찍기");
+      animalCaptureMode = "NONE";
+      animalCapturedImg = null;
+      return;
+    }
+    if (animalPointInRect(mouseX, mouseY, animalSaveQRBtn)) {
+      console.log("[Animal] QR 저장(프리뷰) → goToQR()");
+      if (!animalGoToQRTriggered && typeof goToQR === "function") {
+        animalGoToQRTriggered = true;
+        goToQR();
+      }
+      return;
+    }
+    return; // 프리뷰 중 다른 클릭 무시
+  }
+
+
   // 🔹 BACK 버튼 먼저 처리
   if (
     mouseX > animalBackBtn.x &&
@@ -655,6 +919,26 @@ function mousePressedAnimalGame() {
     return; // BACK 처리 끝
   }
 
+  // ✅ 완료 상태(프리뷰 아님)에서 "사진 찍기" 버튼
+  if (animalCurrentStep > 4 && animalCaptureMode === "NONE") {
+  // ✅ 원형 셔터 클릭 판정
+  let cx = animalPhotoBtn.x + animalPhotoBtn.w / 2;
+  let cy = animalPhotoBtn.y + animalPhotoBtn.h / 2;
+  let r  = animalPhotoBtn.w / 2;
+
+  if (dist(mouseX, mouseY, cx, cy) < r) {
+    console.log("[Animal] 사진 찍기 클릭 → 카운트다운 시작");
+
+    // 이미 카운트다운 중이면 무시
+    if (animalCountdownActive) return;
+
+    animalCountdownActive = true;
+    animalCountdownStart = millis();
+    return;
+  }
+}
+
+
   // 🔹 여기서부터는 기존 SKIP / QR 로직 그대로
   if (animalCurrentStep <= 4) {
     if (millis() - animalLastSkipTime < ANIMAL_SKIP_COOLDOWN) {
@@ -674,19 +958,6 @@ function mousePressedAnimalGame() {
     }
     return;
   }
-
-  if (
-    mouseX > animalQRBtn.x &&
-    mouseX < animalQRBtn.x + animalQRBtn.w &&
-    mouseY > animalQRBtn.y &&
-    mouseY < animalQRBtn.y + animalQRBtn.h
-  ) {
-    if (!animalGoToQRTriggered && typeof goToQR === "function") {
-      animalGoToQRTriggered = true;
-      console.log("[Animal] QR 저장 버튼 클릭 → goToQR()");
-      goToQR();
-    }
-  }
 }
 
 function animalForceNextStep() {
@@ -698,6 +969,9 @@ function animalForceNextStep() {
 
     animalFood.visible = true;
     animalBowl.visible = true;
+
+    animalFeedState = "CARROT";
+    animalFeedHoldStart = null;
 
     console.log("[Animal] SKIP: 1 → 2 (밥주기 시작, 당근/그릇 활성화)");
     return;
@@ -742,9 +1016,12 @@ function resetAnimalStep1() {
 }
 
 function resetAnimalStep2() {
-  // 밥 주기 (당근 + 그릇 다시 보이게)
   animalFood.visible = true;
   animalBowl.visible = true;
+
+  animalFeedState = "CARROT";
+  animalFeedHoldStart = null;
+
   animalStepDone = false;
 }
 
@@ -775,7 +1052,7 @@ function animalDrawUI() {
 
   // ✅ 완료 상태일 때
   if (animalCurrentStep > 4) {
-    let desc = "🎉 동물 키우기 완료! 행복한 시간을 보내세요!🎉";
+    let desc = "동물 키우기 완료! 셔터를 눌러 행복한 순간을 사진으로 기록해 보세요!";
     text(desc, width / 2, 30);
 
     let btnW = 80;
@@ -814,25 +1091,9 @@ function animalDrawUI() {
     textAlign(CENTER, CENTER);
     text("< 이전", leftCenterX, centerY);
     pop();
+  
 
-    // QR 버튼
-    let qrHover =
-      mouseX > animalQRBtn.x &&
-      mouseX < animalQRBtn.x + animalQRBtn.w &&
-      mouseY > animalQRBtn.y &&
-      mouseY < animalQRBtn.y + animalQRBtn.h;
-
-    push();
-    rectMode(CORNER);
-    noStroke();
-    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
-    rect(animalQRBtn.x, animalQRBtn.y, btnW, btnH, 10);
-
-    fill(0);
-    textSize(14);
-    textAlign(CENTER, CENTER);
-    text("QR 저장 >", rightCenterX, centerY);
-    pop();
+    animalDrawPhotoButton();
 
     return;
   }
@@ -842,7 +1103,7 @@ function animalDrawUI() {
   if (animalCurrentStep === 1)
     desc = "1단계) 안아주기: 양팔을 크게 3초 간 벌리세요!";
   else if (animalCurrentStep === 2)
-    desc = "2단계) 밥 주기: 손으로 당근과 그릇을 차례로 터치하세요!";
+    desc = "2단계) 밥 주기: 오른손으로 당근과 그릇을 차례로 2초 간 터치하세요!";
   else if (animalCurrentStep === 3)
     desc = `3단계) 쓰다듬기: 오른손을 머리 위아래로 3회 움직이세요! (${animalWaveCount}/${ANIMAL_REQUIRED_WAVES})`;
   else if (animalCurrentStep === 4)
@@ -904,6 +1165,6 @@ function animalDrawUI() {
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP >", skipCenterX, centerY);
+  text("건너뛰기 >", skipCenterX, centerY);
   pop();
 }

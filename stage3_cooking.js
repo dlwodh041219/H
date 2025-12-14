@@ -62,6 +62,24 @@ let cookGoToQRTriggered = false;
 let cookLastSkipTime = 0;          // ★ 추가
 let COOK_SKIP_COOLDOWN = 800;    // ms
 
+// ====== 캡쳐(사진찍기) : Cooking ======
+let cookCaptureMode = "NONE"; // "NONE" | "PREVIEW"
+let cookCapturedImg = null;   // p5.Image
+let cookFlashAlpha = 0;       // 플래시 알파
+let cookLastCaptureDataURL = null;
+
+let cookPhotoBtn = { x:0, y:0, w:0, h:0 };
+let cookRetakeBtn = { x:0, y:0, w:0, h:0 };
+let cookSaveQRBtn = { x:0, y:0, w:0, h:0 };
+
+let cookFrameNoUI = null;
+
+// ====== 촬영 카운트다운 ======
+let cookCountdownActive = false;
+let cookCountdownStart = 0;
+let COOK_COUNTDOWN_MS = 3000; // 3초
+
+
 function initCookingGame() {
   // ★ 카메라: stage2_avatar.js 에서 쓰는 전역 video 재사용
   if (!video) {
@@ -127,6 +145,15 @@ function cookResetState() {
 
   cookDoneTime = null;
   cookGoToQRTriggered = false;
+
+  cookCaptureMode = "NONE";
+  cookCapturedImg = null;
+  cookFlashAlpha = 0;
+  cookLastCaptureDataURL = null;
+  cookFrameNoUI = null;
+
+  cookCountdownActive = false;
+  cookCountdownStart = 0;
 }
 
 // BodyPose 콜백
@@ -188,17 +215,25 @@ function cookUpdateBodyHeights() {
 
 function drawCookingGame() {
   background(0);
-
-  // ★ 캠 풀스크린 + 이모지 아바타 (stage2_avatar.js 에 정의된 함수)
   drawFaceFullScreen();
 
+  // ✅ 완료 상태 + 프리뷰 전이면 "UI 없는 화면"을 먼저 저장해둠 (중요!)
+  if (cookStage === 4 && cookStageDone && cookCaptureMode === "NONE") {
+    cookFrameNoUI = get(0, 0, width, height);
+  }
+
+  // ✅ 프리뷰 화면이면 프리뷰만 그리고 return
+  if (cookStage === 4 && cookStageDone && cookCaptureMode === "PREVIEW") {
+    cookDrawPhotoPreview();
+    cookDrawFlashEffect();
+    return;
+  }
   // 안내 텍스트
   cookDrawStageInfo();
 
   // 4단계: Face tracking (입 벌리기)만 별도로 처리
   if (cookStage === 3) {
     cookUpdateTaste();
-
   }
 
   // 1~3단계: BodyPose
@@ -222,7 +257,6 @@ function drawCookingGame() {
   if (cookStage === 4) stageIndex = 3;
   let img = cookImgs[stageIndex];
 
-  if (cookStageDone && cookStage === 4) return;
   // 🔥 단계별 그림 표시 (캔버스 우측 하단)
   if (cookStage >= 0) {
     // let img = cookImgs[cookStage];
@@ -243,6 +277,14 @@ function drawCookingGame() {
       textSize(12)
       text('진행 상황',x+75,y)
     }
+
+  // ✅ 완료 상태면 셔터 버튼 그리기
+  if (cookStage === 4 && cookStageDone && cookCaptureMode === "NONE") {
+    cookDrawPhotoButton();
+  }
+
+  cookDrawFlashEffect();
+  cookDrawCountdownOverlay();
   }
 }
 
@@ -496,6 +538,26 @@ function cookDrawKeypoints() {
 }
 
 function mousePressedCookingGame() {
+
+  // ✅ 프리뷰 화면: 다시 찍기 / QR 저장
+  if (cookStage === 4 && cookStageDone && cookCaptureMode === "PREVIEW") {
+    if (cookPointInRect(mouseX, mouseY, cookRetakeBtn)) {
+      console.log("[Cooking] 다시 찍기");
+      cookCaptureMode = "NONE";
+      cookCapturedImg = null;
+      return;
+    }
+    if (cookPointInRect(mouseX, mouseY, cookSaveQRBtn)) {
+      console.log("[Cooking] QR 저장(프리뷰) → goToQR()");
+      if (!cookGoToQRTriggered && typeof goToQR === "function") {
+        cookGoToQRTriggered = true;
+        goToQR();
+      }
+      return;
+    }
+    return;
+  }
+  
   // 🔹 1) BACK 버튼 먼저 처리
   if (
     mouseX > cookBackBtn.x &&
@@ -539,6 +601,22 @@ function mousePressedCookingGame() {
     return;
   }
 
+  // ✅ 완료 상태(프리뷰 아님): 셔터 클릭 → 카운트다운 시작
+  if (cookStage === 4 && cookStageDone && cookCaptureMode === "NONE") {
+    let cx = cookPhotoBtn.x + cookPhotoBtn.w / 2;
+    let cy = cookPhotoBtn.y + cookPhotoBtn.h / 2;
+    let r  = cookPhotoBtn.w / 2;
+
+    if (dist(mouseX, mouseY, cx, cy) < r) {
+      console.log("[Cooking] 사진 찍기 클릭 → 카운트다운 시작");
+      if (cookCountdownActive) return;
+
+      cookCountdownActive = true;
+      cookCountdownStart = millis();
+      return;
+    }
+  }
+
   // 🔹 2) SKIP / QR 처리
   // 완료 상태가 아니면 SKIP 버튼만 작동
   if (!(cookStage === 4 && cookStageDone)) {
@@ -560,20 +638,6 @@ function mousePressedCookingGame() {
       cookForceNextStage();
     }
     return;
-  }
-
-  // 🔹 3) 완료 상태: QR 버튼 처리
-  if (
-    mouseX > cookQRBtn.x &&
-    mouseX < cookQRBtn.x + cookQRBtn.w &&
-    mouseY > cookQRBtn.y &&
-    mouseY < cookQRBtn.y + cookQRBtn.h
-  ) {
-    if (!cookGoToQRTriggered && typeof goToQR === "function") {
-      cookGoToQRTriggered = true;
-      console.log("[Cooking] QR 저장 버튼 클릭 → goToQR()");
-      goToQR();
-    }
   }
 }
 
@@ -648,6 +712,180 @@ function resetCookingStageTaste() {
 }
 
 
+function cookPointInRect(px, py, r) {
+  return px > r.x && px < r.x + r.w && py > r.y && py < r.y + r.h;
+}
+
+function cookTakePhoto() {
+  // ✅ UI 없는 프레임을 우선 사용
+  if (cookFrameNoUI) cookCapturedImg = cookFrameNoUI.get();
+  else cookCapturedImg = get(0, 0, width, height);
+
+  cookFlashAlpha = 255;
+
+  // ✅ dataURL도 같이 저장 (QR 업로드용)
+  try {
+    let g = createGraphics(width, height);
+    g.image(cookCapturedImg, 0, 0, width, height);
+    cookLastCaptureDataURL = g.canvas.toDataURL("image/png");
+    window.__LAST_CAPTURE_DATAURL__ = cookLastCaptureDataURL;
+    g.remove();
+  } catch (e) {
+    console.log("cook toDataURL 실패(무시 가능):", e);
+    cookLastCaptureDataURL = null;
+  }
+
+  cookCaptureMode = "PREVIEW";
+}
+
+function cookDrawFlashEffect() {
+  if (cookFlashAlpha <= 0) return;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(255, cookFlashAlpha);
+  rect(0, 0, width, height);
+
+  noFill();
+  stroke(255, cookFlashAlpha);
+  strokeWeight(18);
+  rect(0, 0, width, height);
+  pop();
+
+  cookFlashAlpha -= 25;
+  if (cookFlashAlpha < 0) cookFlashAlpha = 0;
+}
+
+function cookDrawPhotoButton() {
+  let r = 34;
+  let cx = width / 2;
+  let cy = height - 60;
+
+  cookPhotoBtn.x = cx - r;
+  cookPhotoBtn.y = cy - r;
+  cookPhotoBtn.w = r * 2;
+  cookPhotoBtn.h = r * 2;
+
+  let hover = dist(mouseX, mouseY, cx, cy) < r;
+
+  push();
+  resetMatrix();
+  noStroke();
+
+  fill(0, 80);
+  ellipse(cx, cy + 3, r * 2.2, r * 2.2);
+
+  fill(255);
+  ellipse(cx, cy, hover ? r * 2.15 : r * 2.05, hover ? r * 2.15 : r * 2.05);
+
+  fill(230);
+  ellipse(cx, cy, hover ? r * 1.55 : r * 1.45, hover ? r * 1.55 : r * 1.45);
+  pop();
+}
+
+function cookDrawCountdownOverlay() {
+  if (!cookCountdownActive) return;
+
+  let elapsed = millis() - cookCountdownStart;
+
+  // 3초 넘으면 촬영
+  if (elapsed >= COOK_COUNTDOWN_MS) {
+    cookCountdownActive = false;
+    cookTakePhoto();
+    return;
+  }
+
+  let idx = floor(elapsed / 1000); // 0,1,2
+  let num = 3 - idx;
+  if (num < 1) num = 1;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(0, 150);
+  rect(0, 0, width, height);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(140);
+  text(num, width / 2, height / 2);
+  pop();
+}
+
+function cookDrawPhotoPreview() {
+  background(0);
+
+  if (cookCapturedImg) {
+    push();
+    resetMatrix();
+    imageMode(CENTER);
+
+    let iw = cookCapturedImg.width;
+    let ih = cookCapturedImg.height;
+    let scale = min(width / iw, height / ih);
+    let w = iw * scale;
+    let h = ih * scale;
+
+    image(cookCapturedImg, width/2, height/2, w, h);
+
+    noFill();
+    stroke(255);
+    strokeWeight(6);
+    rectMode(CENTER);
+    rect(width/2, height/2, w, h, 10);
+    pop();
+  }
+
+  let btnW = 160, btnH = 52;
+  let gap = 18;
+  let cy = height - 55;
+
+  let leftCx  = width/2 - (btnW/2 + gap/2);
+  let rightCx = width/2 + (btnW/2 + gap/2);
+
+  cookRetakeBtn.x = leftCx - btnW/2;
+  cookRetakeBtn.y = cy - btnH/2;
+  cookRetakeBtn.w = btnW;
+  cookRetakeBtn.h = btnH;
+
+  cookSaveQRBtn.x = rightCx - btnW/2;
+  cookSaveQRBtn.y = cy - btnH/2;
+  cookSaveQRBtn.w = btnW;
+  cookSaveQRBtn.h = btnH;
+
+  let hoverRetake = cookPointInRect(mouseX, mouseY, cookRetakeBtn);
+  let hoverSave   = cookPointInRect(mouseX, mouseY, cookSaveQRBtn);
+
+  push();
+  resetMatrix();
+  rectMode(CORNER);
+  noStroke();
+
+  fill(hoverRetake ? 245 : 230);
+  rect(cookRetakeBtn.x, cookRetakeBtn.y, btnW, btnH, 16);
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("다시 찍기", leftCx, cy);
+
+  let saving = cookGoToQRTriggered;
+  fill(hoverSave ? color(230,164,174) : color(200,150,160));
+  if (saving) fill(160);
+  rect(cookSaveQRBtn.x, cookSaveQRBtn.y, btnW, btnH, 16);
+
+  fill(0);
+  text(saving ? "저장 중..." : "QR 저장", rightCx, cy);
+
+  fill(255);
+  textStyle(BOLD);
+  textSize(20);
+  text("사진을 확인하고 저장하거나 다시 찍을 수 있어요", width/2, 26);
+
+  pop();
+}
+
+
 // 화면 표시(UI)
 function cookDrawStageInfo() {
   // 상단 바 배경
@@ -662,69 +900,41 @@ function cookDrawStageInfo() {
 
   // ✅ 4단계 완료 상태일 때: 완료 문구 + 왼쪽 BACK, 오른쪽 QR(80x30)
   if (cookStage === 4 && cookStageDone) {
-    let desc = `🎉요리하기 완료! 사랑하는 사람들과 음식을 나누세요!🎉`;
-    text(desc, width / 2, 30);
+  let desc = "요리하기 완료! 셔터를 눌러 행복한 순간을 사진으로 기록해 보세요!";
+  text(desc, width / 2, 30);
 
-    let btnW = 80;
-    let btnH = 30;
-    let centerY = 30;
-    let rightCenterX = width - btnW / 2 - 20; // QR
-    let leftCenterX  = btnW / 2 + 20;         // BACK
+  let btnW = 80;
+  let btnH = 30;
+  let centerY = 30;
+  let leftCenterX  = btnW / 2 + 20; // BACK만
 
-    // 🔹 BACK 버튼 영역
-    cookBackBtn.x = leftCenterX - btnW / 2;
-    cookBackBtn.y = centerY - btnH / 2;
-    cookBackBtn.w = btnW;
-    cookBackBtn.h = btnH;
+  // BACK 버튼 영역
+  cookBackBtn.x = leftCenterX - btnW / 2;
+  cookBackBtn.y = centerY - btnH / 2;
+  cookBackBtn.w = btnW;
+  cookBackBtn.h = btnH;
 
-    // 🔹 QR 버튼 영역
-    cookQRBtn.x = rightCenterX - btnW / 2;
-    cookQRBtn.y = centerY - btnH / 2;
-    cookQRBtn.w = btnW;
-    cookQRBtn.h = btnH;
+  let backHover =
+    mouseX > cookBackBtn.x &&
+    mouseX < cookBackBtn.x + cookBackBtn.w &&
+    mouseY > cookBackBtn.y &&
+    mouseY < cookBackBtn.y + cookBackBtn.h;
 
-    // BACK hover
-    let backHover =
-      mouseX > cookBackBtn.x &&
-      mouseX < cookBackBtn.x + cookBackBtn.w &&
-      mouseY > cookBackBtn.y &&
-      mouseY < cookBackBtn.y + cookBackBtn.h;
+  // BACK 버튼
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
+  rect(cookBackBtn.x, cookBackBtn.y, btnW, btnH, 8);
 
-    // QR hover
-    let qrHover =
-      mouseX > cookQRBtn.x &&
-      mouseX < cookQRBtn.x + cookQRBtn.w &&
-      mouseY > cookQRBtn.y &&
-      mouseY < cookQRBtn.y + cookQRBtn.h;
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("< 이전", leftCenterX, centerY);
+  pop();
 
-    // BACK 버튼
-    push();
-    rectMode(CORNER);
-    noStroke();
-    fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
-    rect(cookBackBtn.x, cookBackBtn.y, btnW, btnH, 8);
-
-    fill(0);
-    textSize(14);
-    textAlign(CENTER, CENTER);
-    text("< 이전", leftCenterX, centerY);
-    pop();
-
-    // QR 버튼
-    push();
-    rectMode(CORNER);
-    noStroke();
-    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
-    rect(cookQRBtn.x, cookQRBtn.y, btnW, btnH, 10);
-
-    fill(0);
-    textSize(14);
-    textAlign(CENTER, CENTER);
-    text("QR 저장 >", rightCenterX, centerY);
-    pop();
-
-    return; // ✅ 완료 화면에서는 여기서 끝
-  }
+  return;
+}
 
   // ✅ 진행 중 단계 텍스트
   let desc = "";
@@ -797,6 +1007,6 @@ function cookDrawStageInfo() {
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP >", skipCenterX, centerY);
+  text("건너뛰기 >", skipCenterX, centerY);
   pop();
 }

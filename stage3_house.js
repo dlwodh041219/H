@@ -50,6 +50,24 @@ let HOUSE_SKIP_COOLDOWN = 800;
 
 let houseImgs = [];
 
+// ====== 캡쳐(사진찍기) : House ======
+let houseCaptureMode = "NONE"; // "NONE" | "PREVIEW"
+let houseCapturedImg = null;
+let houseFlashAlpha = 0;
+let houseLastCaptureDataURL = null;
+
+let housePhotoBtn  = { x:0, y:0, w:0, h:0 };
+let houseRetakeBtn = { x:0, y:0, w:0, h:0 };
+let houseSaveQRBtn = { x:0, y:0, w:0, h:0 };
+
+let houseFrameNoUI = null;
+
+// ====== 촬영 카운트다운 ======
+let houseCountdownActive = false;
+let houseCountdownStart = 0;
+let HOUSE_COUNTDOWN_MS = 3000;
+
+
 // ================= 초기화 (phase=3 && selectedGame==="house" 진입 시 호출) =================
 function initHouseGame() {
   // ★ 카메라: stage2_avatar.js에서 쓰는 전역 video 재사용
@@ -91,6 +109,14 @@ function initHouseGame() {
   houseDoneTime = null;
   houseGoToQRTriggered = false;
 
+  houseCaptureMode = "NONE";
+  houseCapturedImg = null;
+  houseFlashAlpha = 0;
+  houseLastCaptureDataURL = null;
+  houseFrameNoUI = null;
+  houseCountdownActive = false;
+  houseCountdownStart = 0;
+ 
   // ★ BodyPose 로드 & 시작 (공용 video 사용)
   houseBodyPose = ml5.bodyPose("MoveNet", { flipped: true }, () => {
     console.log("House BodyPose ready");
@@ -163,6 +189,18 @@ function drawHouseGame() {
   drawFaceFullScreen();
   pop();
 
+  // ✅ 완료 + 프리뷰 전이면 "UI 없는 화면"을 먼저 저장
+  if (houseStepDone && houseCaptureMode === "NONE") {
+    houseFrameNoUI = get(0, 0, width, height);
+  }
+
+  // ✅ 프리뷰면 프리뷰만 그리고 끝
+  if (houseStepDone && houseCaptureMode === "PREVIEW") {
+    houseDrawPhotoPreview();
+    houseDrawFlashEffect();
+    return;
+  }
+
   // 포즈 디버깅(원하면 유지)
   push();
   if (houseCurrentPose) drawHouseKeypoints();
@@ -183,6 +221,13 @@ function drawHouseGame() {
   resetMatrix();
   drawHouseStepImage();
   pop();
+
+  // ✅ 완료 상태면 셔터 버튼 + 카운트다운/플래시
+  if (houseStepDone && houseCaptureMode === "NONE") {
+    houseDrawPhotoButton();
+  }
+  houseDrawFlashEffect();
+  houseDrawCountdownOverlay();
 }
 
 function drawHouseStepImage() {
@@ -282,8 +327,8 @@ function houseUpdateSaw() {
 
   let avgX = (lw.x + rw.x) / 2;
   let center = width / 2;
-  let leftZone = center - 60;
-  let rightZone = center + 60;
+  let leftZone = center - 30;
+  let rightZone = center + 30;
 
   let inLeft = avgX < leftZone;
   let inRight = avgX > rightZone;
@@ -354,14 +399,24 @@ function houseUpdateHammer() {
 
 // 4단계: 인사
 function houseUpdateWave() {
-  let rw = houseGetPart("right_wrist");
-  if (!rw) return;
+  // 오른손(없으면 팔꿈치로 대체 가능하게)
+  let rw = houseGetPart("right_wrist", 0.05);
+  if (!rw) {
+    rw = houseGetPart("right_elbow", 0.05);
+    if (!rw) return;
+  }
 
-  let centerX = width / 2;
-  let leftBorder = centerX - 40;
-  let rightBorder = centerX + 40;
+  // 오른쪽 어깨 기준선
+  let rs = houseGetPart("right_shoulder");
+  if (!rs) return;
 
-  let isLeft = rw.x < leftBorder;
+  let shoulderX = rs.x;
+
+  // 어깨에서 좌/우로 경계(픽셀) 설정: 필요하면 30~70 사이로 조절
+  let leftBorder  = shoulderX - 40;
+  let rightBorder = shoulderX + 40;
+
+  let isLeft  = rw.x < leftBorder;
   let isRight = rw.x > rightBorder;
 
   if (isLeft) houseWaveLeftStreak++;
@@ -388,6 +443,7 @@ function houseUpdateWave() {
     houseStepDone = true;
   }
 }
+
 
 // 디버그용 키포인트
 function drawHouseKeypoints() {
@@ -421,6 +477,23 @@ function drawHouseKeypoints() {
 }
 
 function mousePressedHouseGame() {
+
+  if (houseStepDone && houseCaptureMode === "PREVIEW") {
+  if (housePointInRect(mouseX, mouseY, houseRetakeBtn)) {
+    houseCaptureMode = "NONE";
+    houseCapturedImg = null;
+    return;
+  }
+  if (housePointInRect(mouseX, mouseY, houseSaveQRBtn)) {
+    if (!houseGoToQRTriggered && typeof goToQR === "function") {
+      houseGoToQRTriggered = true;
+      goToQR();
+    }
+    return;
+  }
+  return;
+}
+
   // 🔹 1) BACK 버튼
   if (
     mouseX > houseBackBtn.x &&
@@ -457,6 +530,20 @@ function mousePressedHouseGame() {
     return;
   }
 
+  // ✅ 완료 상태(프리뷰 아님): 셔터 클릭 → 카운트다운 시작
+  if (houseStepDone && houseCaptureMode === "NONE") {
+    let cx = housePhotoBtn.x + housePhotoBtn.w / 2;
+    let cy = housePhotoBtn.y + housePhotoBtn.h / 2;
+    let r  = housePhotoBtn.w / 2;
+
+    if (dist(mouseX, mouseY, cx, cy) < r) {
+      if (houseCountdownActive) return;
+      houseCountdownActive = true;
+      houseCountdownStart = millis();
+      return;
+   }
+  }
+
   // 🔹 2) SKIP (완료되지 않은 경우만)
   if (!houseStepDone) {
     if (millis() - houseLastSkipTime < HOUSE_SKIP_COOLDOWN) {
@@ -475,20 +562,6 @@ function mousePressedHouseGame() {
       houseForceNextStep();
     }
     return;
-  }
-
-  // 🔹 3) 완료 상태: QR 버튼
-  if (
-    mouseX > houseQRBtn.x &&
-    mouseX < houseQRBtn.x + houseQRBtn.w &&
-    mouseY > houseQRBtn.y &&
-    mouseY < houseQRBtn.y + houseQRBtn.h
-  ) {
-    if (!houseGoToQRTriggered && typeof goToQR === "function") {
-      houseGoToQRTriggered = true;
-      console.log("[House] QR 저장 버튼 클릭 → goToQR()");
-      goToQR();
-    }
   }
 }
 
@@ -510,6 +583,181 @@ function houseForceNextStep() {
 
   console.log("[House] 강제 진행 후 houseStep:", houseStep, "houseStepDone:", houseStepDone);
 }
+
+
+function housePointInRect(px, py, r) {
+  return (
+    px > r.x && px < r.x + r.w &&
+    py > r.y && py < r.y + r.h
+  );
+}
+
+function houseTakePhoto() {
+  // ✅ UI 없는 프레임 우선 사용
+  if (houseFrameNoUI) {
+    houseCapturedImg = houseFrameNoUI.get();
+  } else {
+    houseCapturedImg = get(0, 0, width, height);
+  }
+
+  houseFlashAlpha = 255;
+
+  // ✅ QR 업로드용 dataURL 생성
+  try {
+    let g = createGraphics(width, height);
+    g.image(houseCapturedImg, 0, 0, width, height);
+    houseLastCaptureDataURL = g.canvas.toDataURL("image/png");
+    window.__LAST_CAPTURE_DATAURL__ = houseLastCaptureDataURL;
+    g.remove();
+  } catch (e) {
+    console.log("house toDataURL 실패:", e);
+    houseLastCaptureDataURL = null;
+  }
+
+  houseCaptureMode = "PREVIEW";
+}
+
+function houseDrawFlashEffect() {
+  if (houseFlashAlpha <= 0) return;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(255, houseFlashAlpha);
+  rect(0, 0, width, height);
+
+  noFill();
+  stroke(255, houseFlashAlpha);
+  strokeWeight(18);
+  rect(0, 0, width, height);
+  pop();
+
+  houseFlashAlpha -= 25;
+  if (houseFlashAlpha < 0) houseFlashAlpha = 0;
+}
+
+function houseDrawPhotoButton() {
+  let r = 34;
+  let cx = width / 2;
+  let cy = height - 60;
+
+  housePhotoBtn.x = cx - r;
+  housePhotoBtn.y = cy - r;
+  housePhotoBtn.w = r * 2;
+  housePhotoBtn.h = r * 2;
+
+  let hover = dist(mouseX, mouseY, cx, cy) < r;
+
+  push();
+  resetMatrix();
+  noStroke();
+
+  fill(0, 80);
+  ellipse(cx, cy + 3, r * 2.2, r * 2.2);
+
+  fill(255);
+  ellipse(cx, cy, hover ? r * 2.15 : r * 2.05);
+
+  fill(230);
+  ellipse(cx, cy, hover ? r * 1.55 : r * 1.45);
+  pop();
+}
+
+function houseDrawCountdownOverlay() {
+  if (!houseCountdownActive) return;
+
+  let elapsed = millis() - houseCountdownStart;
+
+  if (elapsed >= HOUSE_COUNTDOWN_MS) {
+    houseCountdownActive = false;
+    houseTakePhoto();
+    return;
+  }
+
+  let idx = floor(elapsed / 1000); // 0,1,2
+  let num = 3 - idx;
+  if (num < 1) num = 1;
+
+  push();
+  resetMatrix();
+  noStroke();
+  fill(0, 150);
+  rect(0, 0, width, height);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(140);
+  text(num, width / 2, height / 2);
+  pop();
+}
+
+function houseDrawPhotoPreview() {
+  background(0);
+
+  if (houseCapturedImg) {
+    push();
+    resetMatrix();
+    imageMode(CENTER);
+
+    let iw = houseCapturedImg.width;
+    let ih = houseCapturedImg.height;
+    let scale = min(width / iw, height / ih);
+    let w = iw * scale;
+    let h = ih * scale;
+
+    image(houseCapturedImg, width/2, height/2, w, h);
+
+    noFill();
+    stroke(255);
+    strokeWeight(6);
+    rectMode(CENTER);
+    rect(width/2, height/2, w, h, 10);
+    pop();
+  }
+
+  let btnW = 160, btnH = 52;
+  let gap = 18;
+  let cy = height - 55;
+
+  let leftCx  = width/2 - (btnW/2 + gap/2);
+  let rightCx = width/2 + (btnW/2 + gap/2);
+
+  houseRetakeBtn.x = leftCx - btnW/2;
+  houseRetakeBtn.y = cy - btnH/2;
+  houseRetakeBtn.w = btnW;
+  houseRetakeBtn.h = btnH;
+
+  houseSaveQRBtn.x = rightCx - btnW/2;
+  houseSaveQRBtn.y = cy - btnH/2;
+  houseSaveQRBtn.w = btnW;
+  houseSaveQRBtn.h = btnH;
+
+  let hoverRetake = housePointInRect(mouseX, mouseY, houseRetakeBtn);
+  let hoverSave   = housePointInRect(mouseX, mouseY, houseSaveQRBtn);
+
+  push();
+  resetMatrix();
+  noStroke();
+
+  fill(hoverRetake ? 245 : 230);
+  rect(houseRetakeBtn.x, houseRetakeBtn.y, btnW, btnH, 16);
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("다시 찍기", leftCx, cy);
+
+  fill(hoverSave ? color(230,164,174) : color(200,150,160));
+  rect(houseSaveQRBtn.x, houseSaveQRBtn.y, btnW, btnH, 16);
+  fill(0);
+  text("QR 저장", rightCx, cy);
+
+  fill(255);
+  textStyle(BOLD);
+  textSize(20);
+  text("사진을 확인하고 저장하거나 다시 찍을 수 있어요", width/2, 26);
+  pop();
+}
+
 
 
 // ================== 집짓기 단계별 리셋 함수 ==================
@@ -563,69 +811,37 @@ function drawHouseUI() {
 
   // ✅ 집 짓기 완료 상태라면: 완료 문구 + 왼쪽 BACK, 오른쪽 QR(80x30)
   if (houseStepDone) {
-    let desc = "🎉 집 짓기 완료! 손님들과 즐거운 시간을 보내세요!🎉";
-    text(desc, width / 2, 30);
+  let desc = "집 짓기 완료! 셔터를 눌러 사진을 찍어보세요!";
+  text(desc, width / 2, 30);
 
-    let btnW = 80;
-    let btnH = 30;
-    let centerY = 30;
-    let rightCenterX = width - btnW / 2 - 20; // QR
-    let leftCenterX  = btnW / 2 + 20;         // BACK
+  let btnW = 80;
+  let btnH = 30;
+  let centerY = 30;
+  let leftCenterX  = btnW / 2 + 20; // BACK만
 
-    // BACK 버튼 영역
-    houseBackBtn.x = leftCenterX - btnW / 2;
-    houseBackBtn.y = centerY - btnH / 2;
-    houseBackBtn.w = btnW;
-    houseBackBtn.h = btnH;
+  houseBackBtn.x = leftCenterX - btnW / 2;
+  houseBackBtn.y = centerY - btnH / 2;
+  houseBackBtn.w = btnW;
+  houseBackBtn.h = btnH;
 
-    // QR 버튼 영역
-    houseQRBtn.x = rightCenterX - btnW / 2;
-    houseQRBtn.y = centerY - btnH / 2;
-    houseQRBtn.w = btnW;
-    houseQRBtn.h = btnH;
+  let backHover =
+    mouseX > houseBackBtn.x && mouseX < houseBackBtn.x + houseBackBtn.w &&
+    mouseY > houseBackBtn.y && mouseY < houseBackBtn.y + houseBackBtn.h;
 
-    let backHover =
-      mouseX > houseBackBtn.x &&
-      mouseX < houseBackBtn.x + houseBackBtn.w &&
-      mouseY > houseBackBtn.y &&
-      mouseY < houseBackBtn.y + houseBackBtn.h;
+  push();
+  rectMode(CORNER);
+  noStroke();
+  fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
+  rect(houseBackBtn.x, houseBackBtn.y, btnW, btnH, 8);
 
-    let qrHover =
-      mouseX > houseQRBtn.x &&
-      mouseX < houseQRBtn.x + houseQRBtn.w &&
-      mouseY > houseQRBtn.y &&
-      mouseY < houseQRBtn.y + houseQRBtn.h;
+  fill(0);
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  text("< 이전", leftCenterX, centerY);
+  pop();
 
-    // BACK 버튼
-    push();
-    rectMode(CORNER);
-    noStroke();
-    fill(backHover ? color(250, 210, 120) : color(230, 190, 140));
-    rect(houseBackBtn.x, houseBackBtn.y, btnW, btnH, 8);
-
-    fill(0);
-    textSize(14);
-    textAlign(CENTER, CENTER);
-    text("< 이전", leftCenterX, centerY);
-    pop();
-
-    // QR 버튼
-    push();
-    rectMode(CORNER);
-    noStroke();
-    fill(qrHover ? color(230, 164, 174) : color(200, 150, 160));
-    rect(houseQRBtn.x, houseQRBtn.y, btnW, btnH, 10);
-
-    fill(0);
-    textSize(14);
-    textAlign(CENTER, CENTER);
-    text("QR 저장 >", rightCenterX, centerY);
-    pop();
-
-    return;
-
-    pop();
-  }
+  return;
+}
 
   // ✅ 진행 중 단계 텍스트
   let desc = "";
@@ -695,6 +911,6 @@ function drawHouseUI() {
   fill(0);
   textSize(14);
   textAlign(CENTER, CENTER);
-  text("SKIP >", skipCenterX, centerY);
+  text("건너뛰기 >", skipCenterX, centerY);
   pop();
 }
