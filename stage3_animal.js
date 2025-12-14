@@ -125,7 +125,7 @@ let animalFrameNoUI = null;
 // ====== 촬영 카운트다운 ======
 let animalCountdownActive = false;
 let animalCountdownStart = 0;
-let ANIMAL_COUNTDOWN_MS = 900;
+let ANIMAL_COUNTDOWN_MS = 3000;
 
 
 // ================== 초기화 (메인에서 호출) ==================
@@ -729,20 +729,25 @@ function animalDrawPhotoButton() {
   // 안쪽
   fill(230);
   ellipse(cx, cy, hover ? r * 1.55 : r * 1.45, hover ? r * 1.55 : r * 1.45);
-
-  // 안내 텍스트
-  fill(255);
-  textAlign(CENTER, CENTER);
-  textSize(14);
-  text("셔터를 눌러 사진을 찍어요", width / 2, cy - 55);
-  pop();
 }
 
 function animalDrawCountdownOverlay() {
   if (!animalCountdownActive) return;
 
   let elapsed = millis() - animalCountdownStart;
-  let left = max(0, ANIMAL_COUNTDOWN_MS - elapsed);
+
+  let idx = floor(elapsed / 1000);
+  let num = 3 - idx;
+
+  // 3초가 넘으면 촬영
+  if (elapsed >= ANIMAL_COUNTDOWN_MS) {
+    animalCountdownActive = false;
+    animalTakePhoto();
+    return;
+  }
+
+  // num이 3,2,1일 때만 표시
+  if (num < 1) num = 1;
 
   push();
   resetMatrix();
@@ -752,18 +757,12 @@ function animalDrawCountdownOverlay() {
 
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(42);
-  text("준비!", width / 2, height / 2 - 20);
-
-  textSize(22);
-  text((left / 1000).toFixed(1), width / 2, height / 2 + 25);
+  textSize(140);                 // 더 크게
+  text(num, width / 2, height / 2);
   pop();
-
-  if (elapsed >= ANIMAL_COUNTDOWN_MS) {
-    animalCountdownActive = false;
-    animalTakePhoto(); // ✅ 여기서 실제 캡쳐
-  }
 }
+
+
 
 function animalDrawPhotoPreview() {
   background(0);
@@ -834,7 +833,8 @@ function animalDrawPhotoPreview() {
 
   // 안내 텍스트(선택)
   fill(255);
-  textSize(14);
+  textStyle(BOLD);
+  textSize(20);
   text("사진을 확인하고 저장하거나 다시 찍을 수 있어요", width/2, 24 + 2);
 
   pop();
@@ -958,19 +958,6 @@ function mousePressedAnimalGame() {
     }
     return;
   }
-
-  if (
-    mouseX > animalQRBtn.x &&
-    mouseX < animalQRBtn.x + animalQRBtn.w &&
-    mouseY > animalQRBtn.y &&
-    mouseY < animalQRBtn.y + animalQRBtn.h
-  ) {
-    if (!animalGoToQRTriggered && typeof goToQR === "function") {
-      animalGoToQRTriggered = true;
-      console.log("[Animal] QR 저장 버튼 클릭 → goToQR()");
-      goToQR();
-    }
-  }
 }
 
 function animalForceNextStep() {
@@ -1065,7 +1052,7 @@ function animalDrawUI() {
 
   // ✅ 완료 상태일 때
   if (animalCurrentStep > 4) {
-    let desc = "🎉 동물 키우기 완료! 행복한 시간을 보내세요!🎉";
+    let desc = "동물 키우기 완료! 셔터를 눌러 행복한 순간을 사진으로 기록해 보세요!";
     text(desc, width / 2, 30);
 
     let btnW = 80;

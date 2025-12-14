@@ -28,7 +28,6 @@ function preload() {
   fontTemplate = loadFont("komi.otf");
   img          = loadImage("pen.jpeg");
   loadAnimalGuideImgs();
-  //qrImg        = loadImage("qr_sample.png");
 }
 
 function setup() {

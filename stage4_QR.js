@@ -203,9 +203,6 @@ function drawQRPage() {
     text("QR 생성 실패 😭", width / 2, height / 2 + 20);
     textSize(12);
     text(qrError, width / 2, height / 2 + 50);
-  } else if (qrReady) {
-    textSize(12);
-    text("스캔하면 방금 찍은 사진 링크로 이동해요", width / 2, height / 2 + 120);
   }
   pop();
 
